@@ -26,6 +26,7 @@ class AutoEncoder(Model):
                  num_groups: int = None,
                  pooling: str = 'torch.nn.Conv2d',
                  mode: str = 'nearest',
+                 block: str = 'modules.res_block.ResidualBlock',
                  use_checkpoint: bool = True,
                  *args,
                  **kwargs,):
@@ -41,6 +42,7 @@ class AutoEncoder(Model):
         make_activation: Type[nn.Module] = load_module(activation)
         make_norm: Type[nn.Module] = load_module(norm)
         make_conv: Type[nn.Module] = load_module(conv)
+        make_block: Type[nn.Module] = load_module(block)
 
         self.encoder.append(
             nn.Sequential(
@@ -51,18 +53,20 @@ class AutoEncoder(Model):
                     stride=1,
                     padding=1,
                 ),
+                make_norm()
             )
         )
 
         in_ch = embed_dim
+        skip_dims = []
 
         for i, out_ch in enumerate(hidden_dims):
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
                 self.encoder.append(
-                    DepthWiseSeperableResidualBlock(
+                    make_block(
                         in_channels=in_ch,
                         out_channels=out_ch,
-                        conv=conv,
+                        layer=conv,
                         activation=activation,
                         norm=norm,
                         num_groups=num_groups,
@@ -70,10 +74,12 @@ class AutoEncoder(Model):
                         drop_path=drop_path,
                         use_checkpoint=use_checkpoint,
                         use_conv=True,
+                        **kwargs
                     )
                 )
 
                 in_ch = out_ch
+                skip_dims.append(in_ch)
 
             if i != len(hidden_dims) - 1:
                 self.encoder.append(
@@ -83,16 +89,17 @@ class AutoEncoder(Model):
                         scale_factor=2,
                         pooling=pooling,
                         use_checkpoint=use_checkpoint,
+                        **kwargs
                     )
                 )
 
         for i, out_ch in list(enumerate(hidden_dims))[::-1]:
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
                 self.decoder.append(
-                    DepthWiseSeperableResidualBlock(
-                        in_channels=in_ch,
+                    make_block(
+                        in_channels=in_ch + skip_dims.pop(),
                         out_channels=out_ch,
-                        conv=conv,
+                        layer=conv,
                         activation=activation,
                         norm=norm,
                         num_groups=num_groups,
@@ -100,6 +107,7 @@ class AutoEncoder(Model):
                         drop_path=drop_path,
                         use_checkpoint=use_checkpoint,
                         use_conv=True,
+                        **kwargs
                     )
                 )
 
@@ -114,24 +122,23 @@ class AutoEncoder(Model):
                         conv=conv,
                         mode=mode,
                         use_checkpoint=use_checkpoint,
+                        **kwargs
                     )
                 )
 
         get_norm_params = get_module_params(make_norm)
 
-        self.decoder.append(
-            nn.Sequential(
-                make_norm(**get_norm_params(in_ch, num_groups=num_groups)),
-                make_activation,
-                make_conv(
-                    in_channels=in_ch,
-                    out_channels=out_channels,
-                    kernel_size=3,
-                    stride=1,
-                    padding=1,
-                ),
-                nn.Sigmoid(),
-            )
+        self.out = nn.Sequential(
+            make_norm(**get_norm_params(in_ch, num_groups=num_groups)),
+            make_activation(),
+            make_conv(
+                in_channels=in_ch,
+                out_channels=out_channels,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+            ),
+            nn.Sigmoid(),
         )
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:

@@ -200,7 +200,7 @@ main.sh
 
 #Pytorch
 checkpoints/
-datasets/
+*.tar
 logs/
 
 

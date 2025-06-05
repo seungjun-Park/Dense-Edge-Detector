@@ -56,6 +56,7 @@ class UNet(Model):
                     stride=1,
                     padding=1,
                 ),
+                make_norm()
             )
         )
 

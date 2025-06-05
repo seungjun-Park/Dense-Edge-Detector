@@ -1,0 +1,88 @@
+module:
+  target: models.unet.UNet
+  params:
+    lr: 2e-5
+    weight_decay: 0.0
+    lr_decay_epoch: 100
+    use_fp16: False
+    log_interval: 30
+    loss_config:
+      target: losses.l1lpips.L1LPIPS
+      params:
+        lpips_weight: 1.0
+        l1_weight: 1.0
+        content_weight: 0.3
+
+    in_channels: 3
+    embed_dim: 16
+    out_channels: 1
+    hidden_dims: [ 32, 64, 128, 256 ]
+    num_blocks: 2
+    dropout: 0.0
+    drop_path: 0.1
+    conv: 'torch.nn.Conv2d'
+    activation: 'torch.nn.GELU'
+    norm: 'torch.nn.BatchNorm2d'
+    num_groups: None
+    pooling: 'torch.nn.Conv2d'
+    mode: 'nearest'
+    block: 'modules.res_block.ResidualBlock'
+    use_checkpoint: True
+
+data:
+  target: datasets.util.DataModuleFromConfig
+  params:
+    num_workers: 4
+    batch_size: 4
+    wrap: True
+    train:
+      target: datasets.arknights.ArknightsDataset
+      params:
+        root: '/local_datasets/anime'
+        # root: 'D:/datasets/edge_detection/anime'
+        train: True
+        size: 512
+        scale: [ 0.25, 1.0 ]
+        color_space: 'rgb'
+
+    validation:
+      target: datasets.arknights.ArknightsDataset
+      params:
+        root: '/local_datasets/anime'
+        # root: 'D:/datasets/edge_detection/anime'
+        train: False
+        size: 512
+        scale: [ 0.25, 1.0 ]
+        color_space: 'rgb'
+
+logger:
+  target: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
+  params:
+    save_dir: './logs'
+    name: 'unet'
+    version: 'vanilla'
+
+
+checkpoints:
+  latest_checkpoints:
+    target: pytorch_lightning.callbacks.ModelCheckpoint
+    params:
+      dirpath: './checkpoints/unet/vanilla'
+      filename: 'last'
+      monitor: 'step'
+      mode: 'max'
+      save_top_k: 1
+
+  best_checkpoint:
+    target: pytorch_lightning.callbacks.ModelCheckpoint
+    params:
+      dirpath: './checkpoints/unet/vanilla'
+      filename: 'best'
+      monitor: 'valid/total_loss'
+      mode: 'min'
+      save_top_k: 1
+
+trainer:
+  accelerator: 'gpu'
+  max_epochs: 300
+  accumulate_grad_batches: 1

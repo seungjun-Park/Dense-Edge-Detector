@@ -32,5 +32,4 @@ dependencies:
       - ninja
       - packaging
       - numpy
-      - flash-attn==2.7.3 --no-build-isolation
       - -e git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers

@@ -7,8 +7,11 @@ from collections.abc import Iterable
 from models.model import Model
 from modules.down import DownBlock
 from modules.up import UpBlock
+from modules.res_block import ConvNextV2ResidualBlock
+from modules.attention import FlashAttentionBlock
+from modules.norm import GlobalResponseNorm
+from utils import to_ntuple
 from utils.load_module import load_module
-from utils.params import get_module_params
 
 
 class UNet(Model):
@@ -18,45 +21,37 @@ class UNet(Model):
                  out_channels: int = None,
                  hidden_dims: Union[List[int], Tuple[int]] = (32, 64, 128, 256),
                  num_blocks: Union[int, List[int], Tuple[int]] = 2,
-                 dropout: float = 0.0,
                  drop_path: float = 0.0,
-                 conv: str = 'torch.nn.Conv2d',
                  activation: str = 'torch.nn.GELU',
-                 norm: str = None,
-                 num_groups: int = None,
-                 pooling: str = 'torch.nn.Conv2d',
+                 num_groups: int = 1,
                  mode: str = 'nearest',
-                 block: str = 'modules.res_block.ResidualBlock',
-                 bottleneck: str = 'modules.res_block.ResidualBlock',
                  use_checkpoint: bool = True,
+                 num_heads: int = 8,
+                 num_head_channels: int = None,
+                 softmax_scale: float = None,
+                 scale_factors: int | List[int] | Tuple[int] = 2,
                  *args,
                  **kwargs,
                  ):
         super(UNet, self).__init__(*args, **kwargs)
 
         out_channels = out_channels if out_channels is not None else in_channels
+        scale_factors = to_ntuple(len(hidden_dims))(scale_factors)
 
         self.hidden_dims = hidden_dims
 
         self.encoder = nn.ModuleList()
         self.decoder = nn.ModuleList()
 
-        make_activation: Type[nn.Module] = load_module(activation)
-        make_norm: Type[nn.Module] = load_module(norm)
-        make_conv: Type[nn.Module] = load_module(conv)
-        make_block: Type[nn.Module] = load_module(block)
-        make_bottleneck: Type[nn.Module] = load_module(bottleneck)
-
         self.encoder.append(
             nn.Sequential(
-                make_conv(
+                nn.Conv2d(
                     in_channels,
                     embed_dim,
                     kernel_size=3,
-                    stride=1,
                     padding=1,
                 ),
-                make_norm()
+                nn.GroupNorm(num_groups, embed_dim),
             )
         )
 
@@ -66,98 +61,82 @@ class UNet(Model):
         for i, out_ch in enumerate(hidden_dims):
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
                 self.encoder.append(
-                    make_block(
+                    ConvNextV2ResidualBlock(
                         in_channels=in_ch,
-                        out_channels=out_ch,
-                        layer=conv,
-                        activation=activation,
-                        norm=norm,
-                        num_groups=num_groups,
-                        dropout=dropout,
-                        drop_path=drop_path,
                         use_checkpoint=use_checkpoint,
-                        use_conv=True,
-                        **kwargs
+                        activation=activation,
+                        drop_path=drop_path,
                     )
                 )
 
-                in_ch = out_ch
                 skip_dims.append(in_ch)
 
-            if i != len(hidden_dims) - 1:
-                self.encoder.append(
-                    DownBlock(
-                        in_channels=in_ch,
-                        out_channels=in_ch,
-                        scale_factor=2,
-                        pooling=pooling,
-                        use_checkpoint=use_checkpoint,
-                        **kwargs
-                    )
+            self.encoder.append(
+                DownBlock(
+                    in_channels=in_ch,
+                    out_channels=out_ch,
+                    scale_factor=scale_factors[i],
+                    use_checkpoint=use_checkpoint,
+                    num_groups=num_groups,
                 )
+            )
+
+            in_ch = out_ch
 
         self.bottle_neck = nn.Sequential(
-            make_bottleneck(
+            FlashAttentionBlock(
                 in_channels=in_ch,
-                out_channels=in_ch,
-                layer=conv,
-                activation=activation,
-                norm=norm,
-                num_groups=num_groups,
-                dropout=dropout,
-                drop_path=drop_path,
                 use_checkpoint=use_checkpoint,
-                use_conv=True,
-                **kwargs
-            )
+                num_heads=num_heads,
+                num_head_channels=num_head_channels,
+                softmax_scale=softmax_scale,
+                activation=activation,
+                drop_path=drop_path,
+            ),
         )
 
         for i, out_ch in list(enumerate(hidden_dims))[::-1]:
+            self.decoder.append(
+                UpBlock(
+                    in_channels=in_ch,
+                    out_channels=out_ch,
+                    scale_factor=scale_factors[i],
+                    mode=mode,
+                    use_checkpoint=use_checkpoint,
+                    num_groups=num_groups,
+                )
+            )
+
+            in_ch = out_ch
+
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
+                in_ch = in_ch + skip_dims.pop()
                 self.decoder.append(
-                    make_block(
-                        in_channels=in_ch + skip_dims.pop(),
-                        out_channels=out_ch,
-                        layer=conv,
-                        activation=activation,
-                        norm=norm,
-                        num_groups=num_groups,
-                        dropout=dropout,
-                        drop_path=drop_path,
-                        use_checkpoint=use_checkpoint,
-                        use_conv=True,
-                        **kwargs
-                    )
-                )
-
-                in_ch = out_ch
-
-            if i != 0:
-                self.decoder.append(
-                    UpBlock(
+                    ConvNextV2ResidualBlock(
                         in_channels=in_ch,
-                        out_channels=in_ch,
-                        scale_factor=2,
-                        conv=conv,
-                        mode=mode,
                         use_checkpoint=use_checkpoint,
-                        **kwargs
+                        activation=activation,
+                        drop_path=drop_path,
                     )
                 )
 
-        get_norm_params = get_module_params(make_norm)
+        make_activation = load_module(activation)
 
-        self.out = nn.Sequential(
-            make_norm(**get_norm_params(in_ch, num_groups=num_groups)),
+        self.out_conv = nn.Conv2d(
+            in_ch,
+            in_ch,
+            kernel_size=3,
+            padding=1,
+            groups=in_ch
+        )
+
+        self.out_block = nn.Sequential(
+            nn.LayerNorm(in_ch, eps=1e-6),
+            nn.Linear(in_ch, in_ch * 4),
             make_activation(),
-            make_conv(
-                in_channels=in_ch,
-                out_channels=out_channels,
-                kernel_size=3,
-                stride=1,
-                padding=1,
-            ),
-            nn.Sigmoid(),
+            GlobalResponseNorm(in_ch * 4),
+            nn.Linear(in_ch * 4, out_channels),
+            nn.Sigmoid()
         )
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
@@ -167,10 +146,15 @@ class UNet(Model):
             outputs = block(outputs)
             if not isinstance(block, DownBlock):
                 skips.append(outputs)
+
         outputs = self.bottle_neck(outputs)
+
         for block in self.decoder:
             if not isinstance(block, UpBlock):
                 outputs = torch.cat([outputs, skips.pop()], dim=1)
             outputs = block(outputs)
 
-        return self.out(outputs)
+        outputs = self.out_conv(outputs)
+        outputs = self.out_block(outputs.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
+
+        return outputs

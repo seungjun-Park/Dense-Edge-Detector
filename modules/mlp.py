@@ -2,15 +2,18 @@ import torch
 import torch.nn as nn
 from typing import Type, Dict
 
+from timm.layers import DropPath
+
 from utils import zero_module
 from utils.load_module import load_module
 from modules.block import Block
-from utils.params import get_module_params
 
 
 class MLP(Block):
     def __init__(self,
+                 activation: str = 'torch.nn.GELU',
                  mlp_ratio: float | int = 2.0,
+                 drop_path: float = 0.,
                  *args,
                  **kwargs,
                  ):
@@ -18,26 +21,22 @@ class MLP(Block):
 
         embed_dim = int(self.in_channels * mlp_ratio)
 
-        make_layer = load_module(self.layer)
-        make_norm = load_module(self.norm)
-        make_activation = load_module(self.activation)
-
-        get_layer_params = get_module_params(make_layer)
-        get_norm_params = get_module_params(make_norm)
+        make_activation = load_module(activation)
 
         self.block = nn.Sequential(
-            make_layer(**get_layer_params(self.in_channels, embed_dim, kernel_size=1)),
-            make_norm(**get_norm_params(self.in_channels, num_groups=self.num_groups)),
+            nn.Linear(self.in_channels, embed_dim),
+            nn.LayerNorm(embed_dim),
             make_activation(),
-            nn.Dropout(self.dropout),
             zero_module(
-                make_layer(**get_layer_params(embed_dim, self.out_channels, kernel_size=1)),
+                nn.Linear(embed_dim, self.out_channels),
             ),
-            make_norm(**get_norm_params(embed_dim, num_groups=self.num_groups)),
+            nn.LayerNorm(self.out_channels),
             make_activation(),
         )
 
+        self.drop_path = DropPath(drop_path)
+
     def _forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.drop_path(self.block(x))
+        return self.drop_path(self.block(x)) + x
 
 

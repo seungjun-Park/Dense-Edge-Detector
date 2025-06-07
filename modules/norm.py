@@ -63,56 +63,18 @@ class SpectralNorm(nn.Module):
         return self.module.forward(*args)
 
 
-class _GlobalResponseNorm(nn.Module, ABC):
+class GlobalResponseNorm(nn.Module):
     def __init__(self,
                  channels: int,
                  **ignored_keywords,
                  ):
         super().__init__()
 
-        self.gamma = nn.Parameter(torch.zeros(1, *self.spatial, channels), requires_grad=True)
-        self.beta = nn.Parameter(torch.zeros(1, *self.spatial, channels), requires_grad=True)
+        self.gamma = nn.Parameter(torch.zeros(1, 1, 1, channels), requires_grad=True)
+        self.beta = nn.Parameter(torch.zeros(1, 1, 1, channels), requires_grad=True)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x.shape = [batch_size, ..., channels]
         gx = torch.norm(x, p=2, dim=tuple(range(1, x.ndim - 1)), keepdim=True)
         nx = gx / (gx.mean(dim=-1, keepdim=True) + 1e-6)
         return self.gamma * (x * nx) + self.beta + x
-
-    @property
-    @abstractmethod
-    def spatial(self) -> List[int]:
-        pass
-
-class GlobalResponseNorm1d(_GlobalResponseNorm):
-    def __init__(self,
-                 *args,
-                 **kwargs
-                 ):
-
-        super().__init__(*args, **kwargs)
-
-    def spatial(self) -> List[int]:
-        return [1, ]
-
-class GlobalResponseNorm2d(_GlobalResponseNorm):
-    def __init__(self,
-                 *args,
-                 **kwargs
-                 ):
-
-        super().__init__(*args, **kwargs)
-
-    def spatial(self) -> List[int]:
-        return [1, 1]
-
-class GlobalResponseNorm3d(_GlobalResponseNorm):
-    def __init__(self,
-                 *args,
-                 **kwargs
-                 ):
-
-        super().__init__(*args, **kwargs)
-
-    def spatial(self) -> List[int]:
-        return [1, 1, 1]

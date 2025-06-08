@@ -7,13 +7,12 @@ from typing import Union, List, Tuple, Type, Dict, Callable
 from utils import zero_module
 from utils.load_module import load_module
 from modules.block import Block
-from modules.norm import GlobalResponseNorm
+from modules.norm import GlobalResponseNorm, LayerNorm
 
 
 class ResidualBlock(Block):
     def __init__(self,
                  activation: str = 'torch.nn.GELU',
-                 num_groups: int = 1,
                  use_conv: bool = True,
                  drop_path: float = 0.,
                  *args,
@@ -25,13 +24,12 @@ class ResidualBlock(Block):
 
         self.block = nn.Sequential(
             nn.Conv2d(self.in_channels, self.out_channels, kernel_size=3, padding=1),
-            nn.GroupNorm(num_groups, self.out_channels),
+            LayerNorm(self.out_channels, data_format='channels_first'),
             make_activation(),
-            nn.Dropout(self.dropout),
             zero_module(
                 nn.Conv2d(self.out_channels, self.out_channels, kernel_size=3, padding=1),
             ),
-            nn.GroupNorm(num_groups, self.out_channels),
+            LayerNorm(self.out_channels, data_format='channels_first'),
             make_activation(),
         )
 

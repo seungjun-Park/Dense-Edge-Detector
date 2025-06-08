@@ -80,7 +80,7 @@ class DepthwiseSeperableResidualBlock(Block):
         )
 
         self.block = nn.Sequential(
-            LayerNorm(self.in_channels, data_format='channels_first'),
+            nn.LayerNorm(self.in_channels, eps=1e-6),
             nn.Linear(self.in_channels, embed_dim),
             make_activation(),
             zero_module(

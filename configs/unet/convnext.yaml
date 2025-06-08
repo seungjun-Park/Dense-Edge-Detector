@@ -35,8 +35,8 @@ data:
     train:
       target: datasets.arknights.ArknightsDataset
       params:
-        # root: '/local_datasets/anime'
-        root: 'D:/datasets/edge_detection/anime'
+        root: '/local_datasets/anime'
+        # root: 'D:/datasets/edge_detection/anime'
         train: True
         size: [1280, 720]
         scale: [ 0.5, 1.0 ]
@@ -45,8 +45,8 @@ data:
     validation:
       target: datasets.arknights.ArknightsDataset
       params:
-        # root: '/local_datasets/anime'
-        root: 'D:/datasets/edge_detection/anime'
+        root: '/local_datasets/anime'
+        # root: 'D:/datasets/edge_detection/anime'
         train: False
         size: [1280, 720]
         scale: [ 0.5, 1.0 ]

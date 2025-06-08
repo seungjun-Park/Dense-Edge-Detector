@@ -4,7 +4,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
-from timm.models.layers import DropPath
 from omegaconf import DictConfig
 from collections import abc
 from abc import ABC, abstractmethod

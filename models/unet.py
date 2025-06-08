@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+from torch.cuda.amp import autocast
 
 from typing import Union, List, Tuple, Type
 from collections.abc import Iterable
@@ -9,8 +11,7 @@ from modules.down import DownBlock
 from modules.up import UpBlock
 from modules.res_block import ConvNextV2ResidualBlock
 from modules.attention import FlashAttentionBlock
-from modules.norm import GlobalResponseNorm
-from utils import to_ntuple
+from modules.norm import GlobalResponseNorm, LayerNorm
 from utils.load_module import load_module
 
 
@@ -23,7 +24,6 @@ class UNet(Model):
                  num_blocks: Union[int, List[int], Tuple[int]] = 2,
                  drop_path: float = 0.0,
                  activation: str = 'torch.nn.GELU',
-                 num_groups: int = 1,
                  mode: str = 'nearest',
                  use_checkpoint: bool = True,
                  num_heads: int = 8,
@@ -36,22 +36,25 @@ class UNet(Model):
         super(UNet, self).__init__(*args, **kwargs)
 
         out_channels = out_channels if out_channels is not None else in_channels
-        scale_factors = to_ntuple(len(hidden_dims))(scale_factors)
 
         self.hidden_dims = hidden_dims
 
         self.encoder = nn.ModuleList()
         self.decoder = nn.ModuleList()
 
+        self.scale_factor = scale_factors.pop(0)
+        self.mode = mode.lower()
+        assert self.mode in ['nearest', 'linear', 'bilinear', 'bicubic', 'trilinear', 'area', 'nearest-eaxct']
+
         self.encoder.append(
             nn.Sequential(
                 nn.Conv2d(
                     in_channels,
                     embed_dim,
-                    kernel_size=3,
-                    padding=1,
+                    kernel_size=self.scale_factor,
+                    stride=self.scale_factor,
                 ),
-                nn.GroupNorm(num_groups, embed_dim),
+                LayerNorm(embed_dim, data_format='channels_first')
             )
         )
 
@@ -71,17 +74,17 @@ class UNet(Model):
 
                 skip_dims.append(in_ch)
 
-            self.encoder.append(
-                DownBlock(
-                    in_channels=in_ch,
-                    out_channels=out_ch,
-                    scale_factor=scale_factors[i],
-                    use_checkpoint=use_checkpoint,
-                    num_groups=num_groups,
+            if i != len(hidden_dims) - 1:
+                self.encoder.append(
+                    DownBlock(
+                        in_channels=in_ch,
+                        out_channels=out_ch,
+                        scale_factor=scale_factors[i],
+                        use_checkpoint=use_checkpoint,
+                    )
                 )
-            )
 
-            in_ch = out_ch
+                in_ch = out_ch
 
         self.bottle_neck = nn.Sequential(
             FlashAttentionBlock(
@@ -96,24 +99,24 @@ class UNet(Model):
         )
 
         for i, out_ch in list(enumerate(hidden_dims))[::-1]:
-            self.decoder.append(
-                UpBlock(
-                    in_channels=in_ch,
-                    out_channels=out_ch,
-                    scale_factor=scale_factors[i],
-                    mode=mode,
-                    use_checkpoint=use_checkpoint,
-                    num_groups=num_groups,
+            if i != len(hidden_dims) - 1:
+                self.decoder.append(
+                    UpBlock(
+                        in_channels=in_ch,
+                        out_channels=out_ch,
+                        scale_factor=scale_factors[i],
+                        mode=mode,
+                        use_checkpoint=use_checkpoint,
+                    )
                 )
-            )
 
-            in_ch = out_ch
+                in_ch = out_ch
 
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
-                in_ch = in_ch + skip_dims.pop()
                 self.decoder.append(
                     ConvNextV2ResidualBlock(
-                        in_channels=in_ch,
+                        in_channels=in_ch + skip_dims.pop(),
+                        out_channels=in_ch,
                         use_checkpoint=use_checkpoint,
                         activation=activation,
                         drop_path=drop_path,
@@ -154,6 +157,7 @@ class UNet(Model):
                 outputs = torch.cat([outputs, skips.pop()], dim=1)
             outputs = block(outputs)
 
+        outputs = F.interpolate(outputs, scale_factor=self.scale_factor, mode=self.mode)
         outputs = self.out_conv(outputs)
         outputs = self.out_block(outputs.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
 

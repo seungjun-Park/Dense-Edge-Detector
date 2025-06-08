@@ -91,9 +91,19 @@ class ConvNextV2ResidualBlock(Block):
 
         self.drop_path = DropPath(drop_prob=drop_path) if drop_path > 0. else nn.Identity()
 
+        if self.in_channels == self.out_channels:
+            self.shortcut = nn.Identity()
+        else:
+            self.shortcut = nn.Conv2d(
+                self.in_channels,
+                self.out_channels,
+                kernel_size=3,
+                padding=1,
+            )
+
     def _forward(self, x: torch.Tensor) -> torch.Tensor:
         h = self.conv(x)
         h = h.permute(0, 2, 3, 1)
         h = self.block(h)
         h = h.permute(0, 3, 1, 2)
-        return self.drop_path(h) + x
+        return self.drop_path(h) + self.shortcut(x)

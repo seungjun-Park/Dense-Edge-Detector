@@ -12,6 +12,7 @@ import tqdm
 from omegaconf import OmegaConf
 import torch
 from pytorch_lightning.trainer import Trainer
+from pytorch_lightning.plugins import MixedPrecisionPlugin
 
 from utils import instantiate_from_config
 from models.model import Model
@@ -50,22 +51,14 @@ def main():
     cli = OmegaConf.from_dotlist(unknown)
     config = OmegaConf.merge(*configs, cli)
 
-    # datamodule
-    datamodule = instantiate_from_config(config.data)
-    # NOTE according to https://pytorch-lightning.readthedocs.io/en/latest/datamodules.html
-    # calling these ourselves should not be necessary but it is.
-    # lightning still takes care of proper multiprocessing though
-
-    model: Model = instantiate_from_config(config.module)
-
-    logger = instantiate_from_config(config.logger)
-
-    callbacks = [instantiate_from_config(config.checkpoints[cfg]) for cfg in config.checkpoints]
-
     trainer_configs = config.trainer
     ckpt_path = None
     if 'ckpt_path' in trainer_configs.keys():
         ckpt_path = trainer_configs.pop('ckpt_path')
+
+    logger = instantiate_from_config(config.logger)
+
+    callbacks = [instantiate_from_config(config.checkpoints[cfg]) for cfg in config.checkpoints]
 
     trainer = Trainer(
         logger=logger,
@@ -74,6 +67,15 @@ def main():
         detect_anomaly=False,
         **trainer_configs
     )
+
+    # datamodule
+    datamodule = instantiate_from_config(config.data)
+    # NOTE according to https://pytorch-lightning.readthedocs.io/en/latest/datamodules.html
+    # calling these ourselves should not be necessary but it is.
+    # lightning still takes care of proper multiprocessing though
+
+    with trainer.init_module():
+        model: Model = instantiate_from_config(config.module)
 
     trainer.fit(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
     # trainer.test(model=model)

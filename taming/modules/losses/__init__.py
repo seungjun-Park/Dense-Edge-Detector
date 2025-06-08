@@ -1,2 +1,2 @@
-from taming.modules.losses.vqperceptual import DummyLoss, LPIPS
+from taming.modules.losses.lpips import LPIPS
 

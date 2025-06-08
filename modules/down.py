@@ -4,12 +4,12 @@ import torch.nn.functional as F
 from typing import Union, Tuple, List, Type, Dict
 
 from modules.block import Block
+from modules.norm import LayerNorm
 
 
 class DownBlock(Block):
     def __init__(self,
                  scale_factor: int | float = 2.0,
-                 num_groups: int = 1,
                  *args,
                  **kwargs
                  ):
@@ -20,7 +20,7 @@ class DownBlock(Block):
         assert self.out_channels % self.in_channels == 0
 
         self.down_layer = nn.Sequential(
-            nn.GroupNorm(num_groups, self.in_channels),
+            LayerNorm(self.in_channels, data_format='channels_first'),
             nn.Conv2d(
                 self.in_channels,
                 self.out_channels,

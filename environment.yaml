@@ -18,7 +18,7 @@ dependencies:
       - pudb
       - imageio
       - imageio-ffmpeg
-      - pytorch-lightning==2.0.0
+      - pytorch-lightning==2.5.0
       - tensorboard
       - protobuf==4.25
       - omegaconf

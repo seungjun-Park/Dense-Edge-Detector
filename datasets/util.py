@@ -68,9 +68,12 @@ class DataModuleFromConfig(pl.LightningDataModule):
         else:
             init_fn = None
 
-        return DataLoader(self.datasets['train'], batch_size=self.batch_size,
-                          num_workers=self.num_workers, shuffle=False if is_iterable_dataset else True,
-                          worker_init_fn=init_fn)
+        return DataLoader(self.datasets['train'],
+                          batch_size=self.batch_size,
+                          num_workers=self.num_workers,
+                          shuffle=False if is_iterable_dataset else True,
+                          worker_init_fn=init_fn,
+                          persistent_workers=True)
 
     def _validation_dataloader(self, shuffle=True):
         if isinstance(self.datasets['validation'], IterableDataset) or self.use_worker_init_fn:
@@ -81,7 +84,8 @@ class DataModuleFromConfig(pl.LightningDataModule):
                           batch_size=self.batch_size,
                           num_workers=self.num_workers,
                           worker_init_fn=init_fn,
-                          shuffle=shuffle)
+                          shuffle=shuffle,
+                          persistent_workers=True)
 
     def _test_dataloader(self, shuffle=True):
         is_iterable_dataset = isinstance(self.datasets['test'], IterableDataset)
@@ -93,8 +97,12 @@ class DataModuleFromConfig(pl.LightningDataModule):
         # do not shuffle dataloader for iterable dataset
         shuffle = shuffle and (not is_iterable_dataset)
 
-        return DataLoader(self.datasets["test"], batch_size=self.batch_size,
-                          num_workers=self.num_workers, worker_init_fn=init_fn, shuffle=shuffle)
+        return DataLoader(self.datasets["test"],
+                          batch_size=self.batch_size,
+                          num_workers=self.num_workers,
+                          worker_init_fn=init_fn,
+                          shuffle=shuffle,
+                          persistent_workers=True)
 
     def _predict_dataloader(self, shuffle=True):
         if isinstance(self.datasets['predict'], IterableDataset) or self.use_worker_init_fn:

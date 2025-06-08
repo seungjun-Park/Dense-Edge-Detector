@@ -4,12 +4,11 @@ import torch.nn.functional as F
 from typing import Union, List, Tuple, Type
 
 from modules.block import Block
-from modules.res_block import ConvNextV2ResidualBlock
+from modules.norm import LayerNorm
 
 
 class UpBlock(Block):
     def __init__(self,
-                 num_groups: int = 1,
                  scale_factor: int | float = 2.0,
                  mode: str = 'nearest',
                  *args,
@@ -24,7 +23,7 @@ class UpBlock(Block):
         assert self.in_channels % self.out_channels == 0
 
         self.up_layer = nn.Sequential(
-            nn.GroupNorm(num_groups, self.in_channels),
+            LayerNorm(self.in_channels, data_format='channels_first'),
             nn.Conv2d(
                 self.in_channels,
                 self.out_channels,

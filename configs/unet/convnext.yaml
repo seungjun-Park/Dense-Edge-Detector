@@ -38,7 +38,7 @@ data:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/edge_detection/anime'
         train: True
-        size: [1280, 720]
+        size: [720, 1280]
         scale: [ 0.5, 1.0 ]
         color_space: 'rgb'
 
@@ -48,7 +48,7 @@ data:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/edge_detection/anime'
         train: False
-        size: [1280, 720]
+        size: [720, 1280]
         scale: [ 0.5, 1.0 ]
         color_space: 'rgb'
 
@@ -83,4 +83,4 @@ trainer:
   accelerator: 'gpu'
   max_epochs: 300
   accumulate_grad_batches: 1
-  precision: '16-true'
+  precision: 'bf16-true'

@@ -83,4 +83,4 @@ trainer:
   accelerator: 'gpu'
   max_epochs: 300
   accumulate_grad_batches: 1
-  precision: '16-mixed'
+  precision: '16-true'

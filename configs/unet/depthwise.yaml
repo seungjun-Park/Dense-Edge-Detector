@@ -1,7 +1,7 @@
 module:
   target: models.unet.UNet
   params:
-    lr: 2e-5
+    lr: 1e-4
     weight_decay: 0.0
     lr_decay_epoch: 100
     use_fp16: False
@@ -57,14 +57,14 @@ logger:
   params:
     save_dir: './logs'
     name: 'unet'
-    version: 'convnext'
+    version: 'depthwise'
 
 
 checkpoints:
   latest_checkpoints:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/convnext'
+      dirpath: './checkpoints/unet/depthwise'
       filename: 'last'
       monitor: 'step'
       mode: 'max'
@@ -73,7 +73,7 @@ checkpoints:
   best_checkpoint:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/convnext'
+      dirpath: './checkpoints/unet/depthwise'
       filename: 'best'
       monitor: 'valid/total_loss'
       mode: 'min'

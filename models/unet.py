@@ -9,7 +9,7 @@ from collections.abc import Iterable
 from models.model import Model
 from modules.down import DownBlock
 from modules.up import UpBlock
-from modules.res_block import ConvNextV2ResidualBlock
+from modules.res_block import ConvNextV2ResidualBlock, DepthwiseSeperableResidualBlock
 from modules.attention import FlashAttentionBlock
 from modules.norm import GlobalResponseNorm, LayerNorm
 from utils.load_module import load_module
@@ -64,7 +64,7 @@ class UNet(Model):
         for i, out_ch in enumerate(hidden_dims):
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
                 self.encoder.append(
-                    ConvNextV2ResidualBlock(
+                    DepthwiseSeperableResidualBlock(
                         in_channels=in_ch,
                         use_checkpoint=use_checkpoint,
                         activation=activation,
@@ -74,7 +74,7 @@ class UNet(Model):
 
                 skip_dims.append(in_ch)
 
-            if i != len(hidden_dims) - 1:
+            if i != len(hidden_dims):
                 self.encoder.append(
                     DownBlock(
                         in_channels=in_ch,
@@ -99,7 +99,7 @@ class UNet(Model):
         )
 
         for i, out_ch in list(enumerate(hidden_dims))[::-1]:
-            if i != len(hidden_dims) - 1:
+            if i != len(hidden_dims):
                 self.decoder.append(
                     UpBlock(
                         in_channels=in_ch,
@@ -114,7 +114,7 @@ class UNet(Model):
 
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
                 self.decoder.append(
-                    ConvNextV2ResidualBlock(
+                    DepthwiseSeperableResidualBlock(
                         in_channels=in_ch + skip_dims.pop(),
                         out_channels=in_ch,
                         use_checkpoint=use_checkpoint,
@@ -123,23 +123,12 @@ class UNet(Model):
                     )
                 )
 
-        make_activation = load_module(activation)
-
-        self.out_conv = nn.Conv2d(
-            in_ch,
-            in_ch,
-            kernel_size=3,
-            padding=1,
-            groups=in_ch
-        )
-
-        self.out_block = nn.Sequential(
-            nn.LayerNorm(in_ch, eps=1e-6),
-            nn.Linear(in_ch, in_ch * 4),
-            make_activation(),
-            GlobalResponseNorm(in_ch * 4),
-            nn.Linear(in_ch * 4, out_channels),
-            nn.Sigmoid()
+        self.out = DepthwiseSeperableResidualBlock(
+            in_channels=in_ch,
+            out_channels=out_channels,
+            use_checkpoint=use_checkpoint,
+            activation=activation,
+            drop_path=0.,
         )
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
@@ -158,7 +147,5 @@ class UNet(Model):
             outputs = block(outputs)
 
         outputs = F.interpolate(outputs, scale_factor=self.scale_factor, mode=self.mode)
-        outputs = self.out_conv(outputs)
-        outputs = self.out_block(outputs.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
 
-        return outputs
+        return self.out(outputs)

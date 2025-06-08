@@ -12,7 +12,6 @@ import tqdm
 from omegaconf import OmegaConf
 import torch
 from pytorch_lightning.trainer import Trainer
-from pytorch_lightning.plugins import MixedPrecisionPlugin
 
 from utils import instantiate_from_config
 from models.model import Model

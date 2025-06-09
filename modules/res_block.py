@@ -57,64 +57,6 @@ class ResidualBlock(Block):
         return self.drop_path(self.block(x)) + self.shortcut(x)
 
 
-class DepthwiseSeperableResidualBlock(Block):
-    def __init__(self,
-                 embed_ratio: float = 4.0,
-                 activation: str = 'torch.nn.GELU',
-                 use_conv: bool = True,
-                 drop_path: float = 0.,
-                 *args,
-                 **kwargs
-                 ):
-        super().__init__(*args, **kwargs)
-
-        make_activation = load_module(activation)
-        embed_dim = int(self.in_channels * embed_ratio)
-
-        self.conv = nn.Conv2d(
-            self.in_channels,
-            self.in_channels,
-            kernel_size=3,
-            padding=1,
-            groups=self.in_channels,
-        )
-
-        self.block = nn.Sequential(
-            nn.LayerNorm(self.in_channels, eps=1e-6),
-            nn.Linear(self.in_channels, embed_dim),
-            make_activation(),
-            zero_module(
-                nn.Linear(embed_dim, self.out_channels)
-            ),
-        )
-
-        if self.in_channels == self.out_channels:
-            self.shortcut = nn.Identity()
-
-        elif use_conv:
-            self.shortcut = nn.Conv2d(
-                self.in_channels,
-                self.out_channels,
-                kernel_size=3,
-                padding=1,
-            )
-
-        else:
-            self.shortcut = nn.Conv2d(
-                self.in_channels,
-                self.out_channels,
-                kernel_size=1,
-            )
-
-        self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
-
-    def _forward(self, x: torch.Tensor) -> torch.Tensor:
-        h = self.conv(x)
-        h = h.permute(0, 2, 3, 1)
-        h = self.block(h)
-        h = h.permute(0, 3, 1, 2)
-        return self.drop_path(h) + self.shortcut(x)
-
 
 class ConvNextV2ResidualBlock(Block):
     def __init__(self,
@@ -130,20 +72,19 @@ class ConvNextV2ResidualBlock(Block):
 
         make_activation = load_module(activation)
 
-        self.conv = nn.Conv2d(
-            self.in_channels,
-            self.in_channels,
-            kernel_size=3,
-            padding=1,
-            groups=self.in_channels
-        )
-
         self.block = nn.Sequential(
-            nn.LayerNorm(self.in_channels, eps=1e-6),
-            nn.Linear(self.in_channels, embed_dim),
+            nn.Conv2d(
+                self.in_channels,
+                self.in_channels,
+                kernel_size=7,
+                padding=3,
+                groups=self.in_channels
+            ),
+            nn.InstanceNorm2d(self.in_channels),
+            nn.Conv2d(self.in_channels, embed_dim, kernel_size=1),
             make_activation(),
             GlobalResponseNorm(embed_dim),
-            nn.Linear(embed_dim, self.out_channels)
+            nn.Conv2d(embed_dim, self.out_channels, kernel_size=1)
         )
 
         self.drop_path = DropPath(drop_prob=drop_path) if drop_path > 0. else nn.Identity()
@@ -159,8 +100,4 @@ class ConvNextV2ResidualBlock(Block):
             )
 
     def _forward(self, x: torch.Tensor) -> torch.Tensor:
-        h = self.conv(x)
-        h = h.permute(0, 2, 3, 1)
-        h = self.block(h)
-        h = h.permute(0, 3, 1, 2)
-        return self.drop_path(h) + self.shortcut(x)
+        return self.drop_path(self.block(x)) + self.shortcut(x)

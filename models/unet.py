@@ -6,6 +6,8 @@ from torch.cuda.amp import autocast
 from typing import Union, List, Tuple, Type
 from collections.abc import Iterable
 
+from torch.nn import InstanceNorm2d
+
 from models.model import Model
 from modules.down import DownBlock
 from modules.up import UpBlock
@@ -55,7 +57,7 @@ class UNet(Model):
                     kernel_size=self.scale_factor,
                     stride=self.scale_factor,
                 ),
-                LayerNorm(embed_dim, data_format='channels_first')
+                InstanceNorm2d(embed_dim)
             )
         )
 
@@ -88,15 +90,12 @@ class UNet(Model):
                 in_ch = out_ch
 
         self.bottle_neck = nn.Sequential(
-            FlashAttentionBlock(
+            ConvNextV2ResidualBlock(
                 in_channels=in_ch,
                 use_checkpoint=use_checkpoint,
-                num_heads=num_heads,
-                num_head_channels=num_head_channels,
-                softmax_scale=softmax_scale,
                 activation=activation,
                 drop_path=drop_path,
-            ),
+            )
         )
 
         for i, out_ch in list(enumerate(hidden_dims))[::-1]:
@@ -127,13 +126,12 @@ class UNet(Model):
         make_activation = load_module(activation)
 
         self.out = nn.Sequential(
-            LayerNorm(in_ch, data_format='channels_first'),
-            make_activation(),
-            nn.Conv2d(
-                in_ch,
-                out_channels,
-                kernel_size=3,
-                padding=1,
+            ConvNextV2ResidualBlock(
+                in_channels=in_ch,
+                out_channels=out_channels,
+                use_checkpoint=use_checkpoint,
+                activation=activation,
+                drop_path=drop_path,
             ),
             nn.Sigmoid(),
         )

@@ -14,10 +14,10 @@ module:
         content_weight: 0.4
 
     in_channels: 3
-    embed_dim: 32
+    embed_dim: 80
     out_channels: 1
-    hidden_dims: [ 64, 128, 256 ]
-    num_blocks: 2
+    hidden_dims: [ 160, 320, 640 ]
+    num_blocks: 1
     drop_path: 0.1
     activation: 'torch.nn.GELU'
     mode: 'nearest'
@@ -82,4 +82,4 @@ trainer:
   accelerator: 'gpu'
   max_epochs: 400
   accumulate_grad_batches: 2
-  precision: 'bf16-true'
+  # precision: 'bf16-true'

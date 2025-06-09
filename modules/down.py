@@ -17,16 +17,13 @@ class DownBlock(Block):
 
         scale_factor = int(scale_factor)
 
-        assert self.out_channels % self.in_channels == 0
-
         self.down_layer = nn.Sequential(
-            LayerNorm(self.in_channels, data_format='channels_first'),
+            nn.InstanceNorm2d(self.in_channels),
             nn.Conv2d(
                 self.in_channels,
                 self.out_channels,
                 kernel_size=scale_factor,
                 stride=scale_factor,
-                groups=self.in_channels,
             )
         )
 

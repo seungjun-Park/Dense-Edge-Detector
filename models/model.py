@@ -97,7 +97,8 @@ class Model(pl.LightningModule, ABC):
         opt_net = torch.optim.AdamW(params,
                                     lr=self.lr,
                                     weight_decay=self.weight_decay,
-                                    betas=(0.5, 0.9)
+                                    betas=(0.5, 0.9),
+                                    eps=1e-6,
                                     )
 
         opts = [opt_net]

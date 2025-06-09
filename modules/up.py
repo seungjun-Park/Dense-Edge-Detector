@@ -20,16 +20,13 @@ class UpBlock(Block):
         self.mode = mode
         self.scale_factor = int(scale_factor)
 
-        assert self.in_channels % self.out_channels == 0
-
         self.up_layer = nn.Sequential(
-            LayerNorm(self.in_channels, data_format='channels_first'),
+            nn.InstanceNorm2d(self.in_channels),
             nn.Conv2d(
                 self.in_channels,
                 self.out_channels,
                 kernel_size=3,
                 padding=1,
-                groups=self.out_channels
             )
         )
 

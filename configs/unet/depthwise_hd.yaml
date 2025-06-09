@@ -14,24 +14,24 @@ module:
         content_weight: 0.4
 
     in_channels: 3
-    embed_dim: 32
+    embed_dim: 64
     out_channels: 1
-    hidden_dims: [ 64, 128, 256 ]
+    hidden_dims: [ 128, 256 ]
     num_blocks: 2
-    drop_path: 0.0
+    drop_path: 0.1
     activation: 'torch.nn.GELU'
     num_groups: 1
     mode: 'nearest'
     num_heads: 8
     num_head_channels: 16
     use_checkpoint: True
-    scale_factors: [ 2, 2, 2, 5]
+    scale_factors: [ 5, 4, 2 ]
 
 data:
   target: datasets.util.DataModuleFromConfig
   params:
     num_workers: 4
-    batch_size: 4
+    batch_size: 2
     wrap: True
     train:
       target: datasets.arknights.ArknightsDataset
@@ -83,5 +83,5 @@ checkpoints:
 trainer:
   accelerator: 'gpu'
   max_epochs: 300
-  accumulate_grad_batches: 4
+  accumulate_grad_batches: 2
   precision: 'bf16-true'

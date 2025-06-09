@@ -26,12 +26,8 @@ class L1LPIPS(_Loss):
         self.ssim_loss = SSIMLoss(data_range=1.001)
 
     def forward(self, inputs: torch.Tensor, targets: torch.Tensor, outputs: torch.Tensor, split: str) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
-        inputs = inputs.float()
-        outputs = outputs.float()
-        targets = targets.float()
-
         l1_loss = F.l1_loss(outputs, targets, reduction='mean')
-        ssim_loss =  self.ssim_loss(outputs, targets).mean()
+        # ssim_loss =  self.ssim_loss(outputs, targets).mean()
 
         targets = targets.repeat(1, 3, 1, 1).contiguous()
         outputs = outputs.repeat(1, 3, 1, 1).contiguous()
@@ -40,7 +36,7 @@ class L1LPIPS(_Loss):
             lpips_loss = self.perceptual_loss(outputs, targets).mean()
             content_loss = self.perceptual_loss(outputs, inputs).mean()
 
-        loss = self.lpips_weight * lpips_loss + self.l1_weight * l1_loss + self.content_weight * content_loss + self.ssim_weight + ssim_loss
+        loss = self.lpips_weight * lpips_loss + self.l1_weight * l1_loss + self.content_weight * content_loss # + self.ssim_weight + ssim_loss
 
         log = {"{}/total_loss".format(split): loss.clone().detach().mean(),
                "{}/l1_loss".format(split): l1_loss.detach().mean(),

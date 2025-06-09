@@ -129,7 +129,7 @@ class UNet(Model):
                 out_channels=out_channels,
                 use_checkpoint=use_checkpoint,
                 activation=activation,
-                drop_path=0.,
+                drop_path=drop_path,
             ),
             nn.Sigmoid(),
         )

@@ -138,9 +138,7 @@ class UNet(Model):
             nn.LayerNorm(in_ch, eps=1e-6),
             nn.Linear(in_ch, in_ch * 4),
             make_activation(),
-            zero_module(
-                nn.Linear(in_ch * 4, out_channels)
-            ),
+            nn.Linear(in_ch * 4, out_channels),
             nn.Sigmoid(),
         )
 

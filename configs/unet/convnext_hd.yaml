@@ -29,13 +29,13 @@ data:
   target: datasets.util.DataModuleFromConfig
   params:
     num_workers: 4
-    batch_size: 2
+    batch_size: 1
     wrap: True
     train:
       target: datasets.arknights.ArknightsDataset
       params:
-        root: '/local_datasets/anime'
-        # root: 'D:/datasets/edge_detection/anime'
+        # root: '/local_datasets/anime'
+        root: 'D:/datasets/edge_detection/anime'
         train: True
         size: [720, 1280]
         scale: [ 0.25, 1.0 ]
@@ -44,8 +44,8 @@ data:
     validation:
       target: datasets.arknights.ArknightsDataset
       params:
-        root: '/local_datasets/anime'
-        # root: 'D:/datasets/edge_detection/anime'
+        # root: '/local_datasets/anime'
+        root: 'D:/datasets/edge_detection/anime'
         train: False
         size: [720, 1280]
         scale: [ 0.25, 1.0 ]

@@ -126,20 +126,16 @@ class UNet(Model):
 
         make_activation = load_module(activation)
 
-        self.conv = nn.Conv2d(
-            in_ch,
-            in_ch,
-            kernel_size=3,
-            padding=1,
-            groups=in_ch,
-        )
-
         self.out = nn.Sequential(
-            nn.LayerNorm(in_ch, eps=1e-6),
-            nn.Linear(in_ch, in_ch * 4),
+            LayerNorm(in_ch, data_format='channels_first'),
             make_activation(),
-            GlobalResponseNorm(in_ch * 4),
-            nn.Linear(in_ch * 4, out_channels),
+            nn.Conv2d(
+                in_ch,
+                out_channels,
+                kernel_size=3,
+                padding=1,
+            ),
+            nn.Sigmoid(),
         )
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
@@ -159,9 +155,5 @@ class UNet(Model):
             outputs = block(outputs)
 
         outputs = F.interpolate(outputs, scale_factor=self.scale_factor, mode=self.mode)
-        outputs = self.conv(outputs)
-        outputs = outputs.permute(0, 2, 3, 1)
-        outputs = self.out(outputs)
-        outputs = outputs.permute(0, 3, 1, 2)
 
-        return outputs.clamp(min=0.0, max=1.0)
+        return self.out(outputs)

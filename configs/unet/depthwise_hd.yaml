@@ -5,7 +5,7 @@ module:
     weight_decay: 0.0
     lr_decay_epoch: 100
     use_fp16: False
-    log_interval: 12
+    log_interval: 30
     loss_config:
       target: losses.l1lpips.L1LPIPS
       params:
@@ -16,22 +16,21 @@ module:
     in_channels: 3
     embed_dim: 32
     out_channels: 1
-    hidden_dims: [ 64, 128, 256, 256 ]
+    hidden_dims: [ 64, 128, 256 ]
     num_blocks: 2
-    drop_path: 0.1
+    drop_path: 0.0
     activation: 'torch.nn.GELU'
     num_groups: 1
     mode: 'bilinear'
     num_heads: 8
-    num_head_channels: 16
     use_checkpoint: True
-    scale_factors: [5, 3, 2, 2, 2]
+    scale_factors: [5, 2, 2, 2]
 
 data:
   target: datasets.util.DataModuleFromConfig
   params:
     num_workers: 4
-    batch_size: 2
+    batch_size: 4
     wrap: True
     train:
       target: datasets.arknights.ArknightsDataset
@@ -39,8 +38,8 @@ data:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/edge_detection/anime'
         train: True
-        size: [1080, 1920]
-        scale: [ 0.5, 1.0 ]
+        size: [720, 1280]
+        scale: [ 0.25, 1.0 ]
         color_space: 'rgb'
 
     validation:
@@ -49,8 +48,8 @@ data:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/edge_detection/anime'
         train: False
-        size: [1080, 1920]
-        scale: [ 0.5, 1.0 ]
+        size: [720, 1280]
+        scale: [ 0.25, 1.0 ]
         color_space: 'rgb'
 
 logger:
@@ -83,5 +82,5 @@ checkpoints:
 trainer:
   accelerator: 'gpu'
   max_epochs: 300
-  accumulate_grad_batches: 5
-  precision: 'bf16-true'
+  accumulate_grad_batches: 1
+  precision: '16-mixed'

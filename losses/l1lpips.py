@@ -33,8 +33,9 @@ class L1LPIPS(Loss):
         targets = targets.repeat(1, 3, 1, 1).contiguous()
         outputs = outputs.repeat(1, 3, 1, 1).contiguous()
 
-        lpips_loss = self.perceptual_loss(outputs, targets).mean()
-        content_loss = self.perceptual_loss(outputs, inputs).mean()
+        with torch.autocast(dtype=torch.float, device_type=outputs.device.type):
+            lpips_loss = self.perceptual_loss(outputs, targets).mean()
+            content_loss = self.perceptual_loss(outputs, inputs).mean()
 
         loss = self.lpips_weight * lpips_loss + self.l1_weight * l1_loss + self.content_weight * content_loss #+ self.ssim_weight + ssim_loss
 

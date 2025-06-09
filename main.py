@@ -90,38 +90,39 @@ def test():
     cli = OmegaConf.from_dotlist(unknown)
     config = OmegaConf.merge(*configs, cli)
 
-    # datamodule
-    # NOTE according to https://pytorch-lightning.readthedocs.io/en/latest/datamodules.html
-    # calling these ourselves should not be necessary but it is.
-    # lightning still takes care of proper multiprocessing though
     device = torch.device('cuda')
-    model = instantiate_from_config(config.module).eval().to(device)
 
-    # data_path = './datasets/arknights_v2/train/surtr/images'
-    data_path = '/local_datasets/wakamo/val/images'
+    model: Model = instantiate_from_config(config.module).to(device).to(dtype=torch.bfloat16).eval()
+    state_dict = torch.load('./checkpoints/unet/depthwise/last.ckpt', map_location="cpu")["state_dict"]
+    model.load_state_dict(state_dict, strict=False)
+    model = model.float()
+
+    data_path = 'D:/datasets/edge_detection/yae_miko_genshin/val/images'
+    # data_path = '/local_datasets/wakamo/val/images'
     file_names = glob.glob(f'{data_path}/*.*')
     with torch.no_grad():
         for name in tqdm.tqdm(file_names):
             img = cv2.imread(f'{name}', cv2.IMREAD_COLOR)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             img = torchvision.transforms.transforms.ToTensor()(img).to(device)
-            img = torchvision.transforms.transforms.Resize(768)(img)
+            img = torchvision.transforms.transforms.Resize(720)(img)
             c, h, w = img.shape
-            if w % 8 != 0:
-                w = math.ceil(w / 8) * 8
-            if h % 8 != 0:
-                h = math.ceil(h / 8) * 8
-            img = torchvision.transforms.transforms.Resize([h, w])(img)
+            if w % 40 != 0:
+                w = math.ceil(w / 40) * 40
+            if h % 40 != 0:
+                h = math.ceil(h / 40) * 40
+            img = torchvision.transforms.transforms.Resize([720, 1280])(img)
             img = img.unsqueeze(0)
-            img = model(img)
-            img = img.detach().cpu()
+            with torch.autocast(dtype=torch.bfloat16, device_type='cuda'):
+                img = model(img)
+            img = img.float().detach().cpu()
             if len(img.shape) == 4:
                 img = img[0]
             img = torchvision.transforms.ToPILImage()(img)
             p1, p2 = name.rsplit('images', 1)
-            if not os.path.isdir(f'{p1}/edges_v2'):
-                os.mkdir(f'{p1}/edges_v2')
-            img.save(f'{p1}/edges_v2/{p2}.png', 'png')
+            if not os.path.isdir(f'{p1}/edges'):
+                os.mkdir(f'{p1}/edges')
+            img.save(f'{p1}/edges/{p2}.png', 'png')
             # p1, p2 = name.rsplit('imgs', 1)
             # img.save(f'{p1}/edge_maps/{p2}', 'png')
 

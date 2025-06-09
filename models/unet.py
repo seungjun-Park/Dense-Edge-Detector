@@ -159,7 +159,6 @@ class UNet(Model):
 
         outputs = F.interpolate(outputs, scale_factor=self.scale_factor, mode=self.mode)
         outputs = self.conv(outputs)
-        outputs = self.conv(outputs)
         outputs = outputs.permute(0, 2, 3, 1)
         outputs = self.out(outputs)
         outputs = outputs.permute(0, 3, 1, 2)

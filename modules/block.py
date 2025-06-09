@@ -20,7 +20,7 @@ class Block(nn.Module, ABC):
 
         self.use_checkpoint = use_checkpoint
 
-        self.apply(self._init_weights)
+        # self.apply(self._init_weights)
 
     def _init_weights(self, module: nn.Module) -> None:
         if isinstance(module, (nn.Conv2d, nn.Linear)):

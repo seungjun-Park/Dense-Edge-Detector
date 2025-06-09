@@ -21,7 +21,7 @@ module:
     drop_path: 0.1
     activation: 'torch.nn.GELU'
     num_groups: 1
-    mode: 'bilinear'
+    mode: 'nearest'
     num_heads: 8
     use_checkpoint: True
     scale_factors: [5, 2, 2, 2]

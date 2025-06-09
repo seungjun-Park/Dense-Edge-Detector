@@ -21,17 +21,17 @@ module:
     drop_path: 0.0
     activation: 'torch.nn.GELU'
     num_groups: 1
-    mode: 'bilinear'
+    mode: 'nearest'
     num_heads: 8
     num_head_channels: 16
     use_checkpoint: True
-    scale_factors: [5, 2, 2, 2]
+    scale_factors: [ 2, 2, 2, 5]
 
 data:
   target: datasets.util.DataModuleFromConfig
   params:
     num_workers: 4
-    batch_size: 1
+    batch_size: 4
     wrap: True
     train:
       target: datasets.arknights.ArknightsDataset
@@ -84,3 +84,4 @@ trainer:
   accelerator: 'gpu'
   max_epochs: 300
   accumulate_grad_batches: 4
+  precision: 'bf16-true'

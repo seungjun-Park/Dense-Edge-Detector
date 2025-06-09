@@ -9,9 +9,9 @@ from collections.abc import Iterable
 from models.model import Model
 from modules.down import DownBlock
 from modules.up import UpBlock
-from modules.res_block import DepthwiseSeperableResidualBlock
+from modules.res_block import DepthwiseSeperableResidualBlock, ConvNextV2ResidualBlock
 from modules.attention import FlashAttentionBlock
-from modules.norm import LayerNorm
+from modules.norm import LayerNorm, GlobalResponseNorm
 from utils.load_module import load_module
 from utils import zero_module
 
@@ -65,7 +65,7 @@ class UNet(Model):
         for i, out_ch in enumerate(hidden_dims):
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
                 self.encoder.append(
-                    DepthwiseSeperableResidualBlock(
+                    ConvNextV2ResidualBlock(
                         in_channels=in_ch,
                         use_checkpoint=use_checkpoint,
                         activation=activation,
@@ -115,7 +115,7 @@ class UNet(Model):
 
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
                 self.decoder.append(
-                    DepthwiseSeperableResidualBlock(
+                    ConvNextV2ResidualBlock(
                         in_channels=in_ch + skip_dims.pop(),
                         out_channels=in_ch,
                         use_checkpoint=use_checkpoint,
@@ -138,6 +138,7 @@ class UNet(Model):
             nn.LayerNorm(in_ch, eps=1e-6),
             nn.Linear(in_ch, in_ch * 4),
             make_activation(),
+            GlobalResponseNorm(in_ch * 4),
             nn.Linear(in_ch * 4, out_channels),
         )
 

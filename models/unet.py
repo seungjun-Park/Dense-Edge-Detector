@@ -139,11 +139,11 @@ class UNet(Model):
             nn.Linear(in_ch, in_ch * 4),
             make_activation(),
             nn.Linear(in_ch * 4, out_channels),
-            nn.Sigmoid(),
         )
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         outputs = inputs
+
         skips = []
         for block in self.encoder:
             outputs = block(outputs)
@@ -163,4 +163,4 @@ class UNet(Model):
         outputs = self.out(outputs)
         outputs = outputs.permute(0, 3, 1, 2)
 
-        return outputs
+        return outputs.clamp(min=0.0, max=1.0)

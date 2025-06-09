@@ -9,10 +9,11 @@ from collections.abc import Iterable
 from models.model import Model
 from modules.down import DownBlock
 from modules.up import UpBlock
-from modules.res_block import ConvNextV2ResidualBlock, DepthwiseSeperableResidualBlock
+from modules.res_block import DepthwiseSeperableResidualBlock
 from modules.attention import FlashAttentionBlock
-from modules.norm import GlobalResponseNorm, LayerNorm
+from modules.norm import LayerNorm
 from utils.load_module import load_module
+from utils import zero_module
 
 
 class UNet(Model):
@@ -123,18 +124,25 @@ class UNet(Model):
                     )
                 )
 
+        make_activation = load_module(activation)
+
+        self.conv = nn.Conv2d(
+            in_ch,
+            in_ch,
+            kernel_size=3,
+            padding=1,
+            groups=in_ch,
+        )
+
         self.out = nn.Sequential(
-            DepthwiseSeperableResidualBlock(
-                in_channels=in_ch,
-                out_channels=out_channels,
-                use_checkpoint=use_checkpoint,
-                activation=activation,
-                drop_path=drop_path,
+            nn.LayerNorm(in_ch, eps=1e-6),
+            nn.Linear(in_ch, in_ch * 4),
+            make_activation(),
+            zero_module(
+                nn.Linear(in_ch * 4, out_channels)
             ),
             nn.Sigmoid(),
         )
-
-        self.save_hyperparameters(ignore=['loss'])
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         outputs = inputs
@@ -152,5 +160,10 @@ class UNet(Model):
             outputs = block(outputs)
 
         outputs = F.interpolate(outputs, scale_factor=self.scale_factor, mode=self.mode)
+        outputs = self.conv(outputs)
+        outputs = self.conv(outputs)
+        outputs = outputs.permute(0, 2, 3, 1)
+        outputs = self.out(outputs)
+        outputs = outputs.permute(0, 3, 1, 2)
 
-        return self.out(outputs)
+        return outputs

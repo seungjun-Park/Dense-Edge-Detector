@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 
 from typing import Union, List, Tuple, Any, Optional
 from utils import instantiate_from_config
+from losses.loss import Loss
 
 
 class Model(pl.LightningModule, ABC):
@@ -32,7 +33,7 @@ class Model(pl.LightningModule, ABC):
         self.log_interval = log_interval
 
         if loss_config is not None:
-            self.loss = instantiate_from_config(loss_config).eval()
+            self.loss: Loss = instantiate_from_config(loss_config).eval()
         else:
             self.loss = None
 

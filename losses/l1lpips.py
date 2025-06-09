@@ -1,13 +1,14 @@
 import torch
 import torch.nn.functional as F
-from torch.nn.modules.loss import _Loss
+
 from piq import SSIMLoss
 
 from typing import Tuple, Dict
 from taming.modules.losses import LPIPS
+from losses.loss import Loss
 
 
-class L1LPIPS(_Loss):
+class L1LPIPS(Loss):
     def __init__(self,
                  lpips_weight: float = 1.0,
                  l1_weight: float = 1.0,

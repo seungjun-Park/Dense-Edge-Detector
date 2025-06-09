@@ -20,17 +20,17 @@ class Block(nn.Module, ABC):
 
         self.use_checkpoint = use_checkpoint
 
-        # self.apply(self._init_weights)
-
-    def _init_weights(self, module: nn.Module) -> None:
-        if isinstance(module, (nn.Conv2d, nn.Linear)):
-            nn.init.trunc_normal_(module.weight, std=0.02)
-            if module.bias is not None:
-                nn.init.constant_(module.bias, 0)
-
-        elif isinstance(module, (nn.LayerNorm, LayerNorm)):
-            nn.init.constant_(module.bias, 0)
-            nn.init.constant_(module.weight, 1.0)
+    #     self.apply(self._init_weights)
+    #
+    # def _init_weights(self, module: nn.Module) -> None:
+    #     if isinstance(module, (nn.Conv2d, nn.Linear)):
+    #         nn.init.trunc_normal_(module.weight, std=0.02)
+    #         if module.bias is not None:
+    #             nn.init.constant_(module.bias, 0)
+    #
+    #     elif isinstance(module, (nn.LayerNorm, LayerNorm)):
+    #         nn.init.constant_(module.bias, 0)
+    #         nn.init.constant_(module.weight, 1.0)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return checkpoint(self._forward, (x,), self.parameters(), flag=self.use_checkpoint)

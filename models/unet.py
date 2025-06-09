@@ -11,7 +11,7 @@ from torch.nn import InstanceNorm2d
 from models.model import Model
 from modules.down import DownBlock
 from modules.up import UpBlock
-from modules.res_block import DepthwiseSeperableResidualBlock, ConvNextV2ResidualBlock
+from modules.res_block import ConvNextV2ResidualBlock
 from modules.attention import FlashAttentionBlock
 from modules.norm import LayerNorm, GlobalResponseNorm
 from utils.load_module import load_module

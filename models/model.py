@@ -10,8 +10,6 @@ from abc import ABC, abstractmethod
 
 from typing import Union, List, Tuple, Any, Optional
 from utils import instantiate_from_config
-from modules.norm import LayerNorm
-from losses.loss import Loss
 
 
 class Model(pl.LightningModule, ABC):
@@ -34,14 +32,12 @@ class Model(pl.LightningModule, ABC):
         self.log_interval = log_interval
 
         if loss_config is not None:
-            self.loss: Loss = instantiate_from_config(loss_config).eval()
+            self.loss = instantiate_from_config(loss_config).eval()
         else:
             self.loss = None
 
         if ckpt_path is not None:
             self.init_from_ckpt(path=ckpt_path, ignore_keys=ignore_keys)
-
-        self.apply(self._init_weights)
 
     def init_from_ckpt(self, path, ignore_keys=list()):
         state_dict = torch.load(path, map_location="cpu")["state_dict"]
@@ -54,18 +50,6 @@ class Model(pl.LightningModule, ABC):
         self.load_state_dict(state_dict, strict=False)
         print(f"Restored from {path}")
 
-    def _init_weights(self, module: nn.Module) -> None:
-        if isinstance(module, (nn.Conv2d, nn.Linear)):
-            nn.init.trunc_normal_(module.weight, std=0.02)
-            if module.bias is not None:
-                nn.init.constant_(module.bias, 0)
-
-        elif isinstance(module, (nn.LayerNorm, LayerNorm)):
-            nn.init.constant_(module.bias, 0)
-            nn.init.constant_(module.weight, 1.0)
-
-        else:
-            pass
 
     @abstractmethod
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
@@ -88,7 +72,7 @@ class Model(pl.LightningModule, ABC):
         if self.global_step % self.log_interval == 0:
             self.log_images(inputs, targets, outputs)
 
-        self.log_dict(loss_log, prog_bar=False)
+        self.log_dict(loss_log, prog_bar=True)
 
         return loss
 

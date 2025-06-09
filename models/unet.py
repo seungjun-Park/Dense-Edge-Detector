@@ -123,13 +123,18 @@ class UNet(Model):
                     )
                 )
 
-        self.out = DepthwiseSeperableResidualBlock(
-            in_channels=in_ch,
-            out_channels=out_channels,
-            use_checkpoint=use_checkpoint,
-            activation=activation,
-            drop_path=0.,
+        self.out = nn.Sequential(
+            DepthwiseSeperableResidualBlock(
+                in_channels=in_ch,
+                out_channels=out_channels,
+                use_checkpoint=use_checkpoint,
+                activation=activation,
+                drop_path=0.,
+            ),
+            nn.Sigmoid(),
         )
+
+        self.save_hyperparameters(ignore=['loss'])
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         outputs = inputs

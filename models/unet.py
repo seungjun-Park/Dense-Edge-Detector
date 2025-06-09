@@ -98,6 +98,9 @@ class UNet(Model):
             )
         )
 
+        hidden_dims.pop()
+        hidden_dims.insert(0, embed_dim)
+
         for i, out_ch in list(enumerate(hidden_dims))[::-1]:
             if i != len(hidden_dims):
                 self.decoder.append(

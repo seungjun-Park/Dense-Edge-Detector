@@ -25,7 +25,7 @@ module:
     num_heads: 8
     num_head_channels: 16
     use_checkpoint: True
-    scale_factors: [5, 4, 3, 2]
+    scale_factors: [5, 2, 2, 2]
 
 data:
   target: datasets.util.DataModuleFromConfig

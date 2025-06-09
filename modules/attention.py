@@ -72,6 +72,6 @@ class FlashAttentionBlock(AttentionBlock):
         super().__init__(*args, **kwargs)
 
     def attn_func(self, qkv: torch.Tensor) -> torch.Tensor:
-        return flash_attn_qkvpacked_func(qkv, 0., self.softmax_scale)
+        return flash_attn_qkvpacked_func(qkv.to(torch.float16), 0., self.softmax_scale).float()
 
 

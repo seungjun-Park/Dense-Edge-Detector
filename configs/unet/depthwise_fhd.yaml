@@ -31,7 +31,7 @@ data:
   target: datasets.util.DataModuleFromConfig
   params:
     num_workers: 4
-    batch_size: 2
+    batch_size: 1
     wrap: True
     train:
       target: datasets.arknights.ArknightsDataset
@@ -83,5 +83,4 @@ checkpoints:
 trainer:
   accelerator: 'gpu'
   max_epochs: 300
-  accumulate_grad_batches: 2
-  precision: '16-mixed'
+  accumulate_grad_batches: 4

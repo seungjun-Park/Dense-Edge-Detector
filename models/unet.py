@@ -11,7 +11,8 @@ from torch.nn import InstanceNorm2d
 from models.model import Model
 from modules.down import DownBlock
 from modules.up import UpBlock
-from modules.res_block import ConvNextV2ResidualBlock
+from modules.res_block import ResidualBlock
+from modules.conv_next import ConvNextV2Block, LocalConvNextV2Block
 from modules.attention import FlashAttentionBlock
 from modules.norm import LayerNorm, GlobalResponseNorm
 from utils.load_module import load_module
@@ -29,9 +30,6 @@ class UNet(Model):
                  activation: str = 'torch.nn.GELU',
                  mode: str = 'nearest',
                  use_checkpoint: bool = True,
-                 num_heads: int = 8,
-                 num_head_channels: int = None,
-                 softmax_scale: float = None,
                  scale_factors: int | List[int] | Tuple[int] = 2,
                  *args,
                  **kwargs,
@@ -67,7 +65,7 @@ class UNet(Model):
         for i, out_ch in enumerate(hidden_dims):
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
                 self.encoder.append(
-                    ConvNextV2ResidualBlock(
+                    LocalConvNextV2Block(
                         in_channels=in_ch,
                         use_checkpoint=use_checkpoint,
                         activation=activation,
@@ -90,7 +88,7 @@ class UNet(Model):
                 in_ch = out_ch
 
         self.bottle_neck = nn.Sequential(
-            ConvNextV2ResidualBlock(
+            LocalConvNextV2Block(
                 in_channels=in_ch,
                 use_checkpoint=use_checkpoint,
                 activation=activation,
@@ -117,7 +115,7 @@ class UNet(Model):
 
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
                 self.decoder.append(
-                    ConvNextV2ResidualBlock(
+                    LocalConvNextV2Block(
                         in_channels=in_ch + skip_dims.pop(),
                         out_channels=in_ch,
                         use_checkpoint=use_checkpoint,
@@ -129,12 +127,13 @@ class UNet(Model):
         make_activation = load_module(activation)
 
         self.out = nn.Sequential(
-            ConvNextV2ResidualBlock(
-                in_channels=in_ch,
-                out_channels=out_channels,
-                use_checkpoint=use_checkpoint,
-                activation=activation,
-                drop_path=drop_path,
+            nn.InstanceNorm2d(in_ch),
+            make_activation(),
+            nn.Conv2d(
+                in_ch,
+                out_channels,
+                kernel_size=3,
+                padding=1,
             ),
             nn.Sigmoid(),
         )

@@ -127,14 +127,18 @@ class UNet(Model):
         make_activation = load_module(activation)
 
         self.out = nn.Sequential(
-            nn.InstanceNorm2d(in_ch),
-            make_activation(),
             nn.Conv2d(
                 in_ch,
-                out_channels,
+                in_ch,
                 kernel_size=3,
                 padding=1,
+                groups=in_ch
             ),
+            nn.InstanceNorm2d(in_ch),
+            nn.Conv2d(in_ch, in_ch * 4, kernel_size=1),
+            make_activation(),
+            GlobalResponseNorm(in_ch * 4),
+            nn.Conv2d(in_ch * 4, out_channels, kernel_size=1),
             nn.Sigmoid(),
         )
 

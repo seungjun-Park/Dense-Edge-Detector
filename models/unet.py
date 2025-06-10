@@ -154,6 +154,6 @@ class UNet(Model):
                 outputs = torch.cat([outputs, skips.pop()], dim=1)
             outputs = block(outputs)
 
-        outputs = F.interpolate(outputs, scale_factor=self.scale_factor, mode=self.mode)
+        outputs = F.interpolate(outputs, scale_factor=self.scale_factor, mode=self.mode, align_corners=False, antialias=True)
 
         return self.out(outputs)

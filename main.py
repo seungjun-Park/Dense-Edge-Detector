@@ -141,5 +141,5 @@ def test():
     # print(f'avg w: {sum(mean_w) / len(mean_w)}')
 
 if __name__ == '__main__':
-    # main()
-    test()
+    main()
+    # test()

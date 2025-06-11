@@ -86,8 +86,9 @@ class ArknightsDataset(Dataset):
 
         c, h, w = img.shape
         size = [ nearest_multiple(h, self.multiply), nearest_multiple(w, self.multiply)]
-        img = F.interpolate(img, size, mode='bilinear', antialias=True)
-        edge = F.interpolate(edge, size, mode='bilinear', antialias=True)
+
+        img = tf.resize(img, size, tf.InterpolationMode.BILINEAR, antialias=True)
+        edge = tf.resize(img, size, tf.InterpolationMode.BILINEAR, antialias=True)
 
         i, j, h, w = transforms.RandomResizedCrop.get_params(img, scale=self.scale, ratio=self.ratio)
 

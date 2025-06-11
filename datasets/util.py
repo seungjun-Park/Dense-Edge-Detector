@@ -161,3 +161,7 @@ def calculate_mean_std(root: str, use_color: bool = True):
         std = np.mean([s[0] for s in stds])
 
     return mean, std
+
+
+def nearest_multiple(x: torch.Tensor, multiply: int = 1) -> int:
+    return max(multiply, int(round(x / multiply)) * multiply)

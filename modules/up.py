@@ -31,6 +31,6 @@ class UpBlock(Block):
         )
 
     def _forward(self, x: torch.Tensor):
-        x = F.interpolate(x, scale_factor=self.scale_factor, mode=self.mode, align_corners=False, antialias=True)
+        x = F.interpolate(x, scale_factor=self.scale_factor, mode=self.mode, antialias=True)
 
         return self.up_layer(x)

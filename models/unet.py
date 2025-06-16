@@ -60,7 +60,7 @@ class UNet(Model):
         )
 
         in_ch = embed_dim
-        skip_dims = []
+        skip_dims = [ embed_dim ]
 
         for i, out_ch in enumerate(hidden_dims):
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
@@ -124,6 +124,8 @@ class UNet(Model):
                     )
                 )
 
+        in_ch = in_ch + skip_dims.pop()
+
         make_activation = load_module(activation)
 
         self.out = nn.Sequential(
@@ -132,6 +134,7 @@ class UNet(Model):
                 in_ch,
                 kernel_size=3,
                 padding=1,
+                groups=in_ch,
             ),
             nn.InstanceNorm2d(in_ch),
             nn.Conv2d(in_ch, in_ch * 4, kernel_size=1),
@@ -156,6 +159,7 @@ class UNet(Model):
                 outputs = torch.cat([outputs, skips.pop()], dim=1)
             outputs = block(outputs)
 
+        outputs = torch.cat([outputs, skips.pop()], dim=1)
         outputs = F.interpolate(outputs, scale_factor=self.scale_factor, mode=self.mode)
         outputs = self.out(outputs)
 

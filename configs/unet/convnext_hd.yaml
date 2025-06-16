@@ -15,9 +15,9 @@ module:
         content_weight: 0.4
 
     in_channels: 3
-    embed_dim: 32
+    embed_dim: 64
     out_channels: 1
-    hidden_dims: [ 64, 128 ]
+    hidden_dims: [ 128, 256 ]
     num_blocks: 2
     drop_path: 0.1
     activation: 'torch.nn.GELU'

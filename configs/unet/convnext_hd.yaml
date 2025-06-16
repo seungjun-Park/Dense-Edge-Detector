@@ -38,8 +38,8 @@ data:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/edge_detection/anime'
         train: True
-        size: [720, 1280]
-        scale: [ 0.75, 1.0 ]
+        size: [800, 800]
+        scale: [ 0.9, 1.0 ]
         color_space: 'rgb'
 
     validation:
@@ -48,8 +48,8 @@ data:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/edge_detection/anime'
         train: False
-        size: [720, 1280]
-        scale: [ 0.75, 1.0 ]
+        size: [800, 800]
+        scale: [ 0.9, 1.0 ]
         color_space: 'rgb'
 
 logger:

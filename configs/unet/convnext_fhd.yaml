@@ -34,22 +34,25 @@ data:
     train:
       target: datasets.arknights.ArknightsDataset
       params:
-        root: '/local_datasets/anime'
-        # root: 'D:/datasets/edge_detection/anime'
+        # root: '/local_datasets/anime'
+        root: 'D:/datasets/edge_detection/anime'
         train: True
         size: [1080, 1920]
         scale: [ 0.25, 1.0 ]
         color_space: 'rgb'
+        max_size: 1920
 
     validation:
       target: datasets.arknights.ArknightsDataset
       params:
-        root: '/local_datasets/anime'
-        # root: 'D:/datasets/edge_detection/anime'
+        # root: '/local_datasets/anime'
+        root: 'D:/datasets/edge_detection/anime'
         train: False
         size: [1080, 1920]
         scale: [ 0.25, 1.0 ]
         color_space: 'rgb'
+        max_size: 1920
+        multiply: 40
 
 logger:
   target: pytorch_lightning.loggers.tensorboard.TensorBoardLogger

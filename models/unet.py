@@ -132,14 +132,12 @@ class UNet(Model):
                 in_ch,
                 kernel_size=3,
                 padding=1,
-                groups=in_ch
             ),
             nn.InstanceNorm2d(in_ch),
             nn.Conv2d(in_ch, in_ch * 4, kernel_size=1),
             make_activation(),
             GlobalResponseNorm(in_ch * 4),
             nn.Conv2d(in_ch * 4, out_channels, kernel_size=1),
-            nn.Sigmoid(),
         )
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
@@ -159,5 +157,6 @@ class UNet(Model):
             outputs = block(outputs)
 
         outputs = F.interpolate(outputs, scale_factor=self.scale_factor, mode=self.mode, align_corners=False, antialias=True)
+        outputs = self.out(outputs)
 
-        return self.out(outputs)
+        return outputs.clamp(min=0., max=1.0)

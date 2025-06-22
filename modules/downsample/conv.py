@@ -28,20 +28,6 @@ class ConvDownSample(DownSample):
             ),
         )
 
-        self.shortcut = nn.Sequential(
-            nn.AvgPool2d(
-                kernel_size=self.scale_factor,
-                stride=self.scale_factor,
-            ),
-            nn.Conv2d(
-                self.in_channels,
-                self.out_channels,
-                kernel_size=1,
-            ) if self.in_channels != self.out_channels else
-            nn.Identity(),
-            LayerNorm(self.out_channels),
-        )
-
     def _forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.down_layer(x) + self.shortcut(x)
+        return self.down_layer(x)
 

@@ -17,14 +17,14 @@ module:
     in_channels: 3
     embed_dim: 32
     out_channels: 1
-    hidden_dims: [ 128, 256 ]
+    hidden_dims: [ 64, 128, 256 ]
     num_blocks: 2
     drop_path: 0.1
     activation: 'torch.nn.SiLU'
     mode: 'nearest'
     num_heads: 8
     use_checkpoint: False
-    scale_factors: [ 5, 4, 2 ]
+    scale_factors: [ 5, 2, 2, 2 ]
 
 data:
   target: datasets.util.DataModuleFromConfig

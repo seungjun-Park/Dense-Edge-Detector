@@ -14,21 +14,17 @@ class ConvTransposeUpSample(UpSample):
                  ):
         super().__init__(*args, **kwargs)
 
-        self.norm = LayerNorm(self.in_channels)
-
-        self.conv_t = nn.ConvTranspose2d(
-            self.in_channels,
-            self.out_channels,
-            kernel_size=self.scale_factor,
-            stride=self.scale_factor,
-            padding=0,
-            output_padding=0,
+        self.up_layer = nn.Sequential(
+            LayerNorm(self.in_channels),
+            nn.ConvTranspose2d(
+                self.in_channels,
+                self.out_channels,
+                kernel_size=self.scale_factor,
+                stride=self.scale_factor,
+                padding=0,
+                output_padding=0,
+            ),
         )
 
     def _forward(self, x: torch.Tensor):
-        x = self.norm(x)
-        # Unable to torch.compile.
-        # nn.ConvTranspose can not be optimized by triton backend.(Occur fallback)
-        with torch._dynamo.disable():
-            x = self.conv_t(x)
-        return x
+        return self.up_layer(x)

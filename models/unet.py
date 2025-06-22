@@ -129,7 +129,7 @@ class UNet(Model):
 
         self.out = nn.Sequential(
             PixelShuffleUpSample(
-                in_channels=in_ch,
+                in_channels=in_ch + skip_dims.pop(),
                 out_channels=in_ch,
                 scale_factor=self.scale_factor,
                 use_checkpoint=use_checkpoint,

@@ -15,16 +15,16 @@ module:
         content_weight: 0.4
 
     in_channels: 3
-    embed_dim: 64
+    embed_dim: 32
     out_channels: 1
     hidden_dims: [ 128, 256 ]
     num_blocks: 2
     drop_path: 0.1
-    activation: 'torch.nn.GELU'
+    activation: 'torch.nn.SiLU'
     mode: 'nearest'
     num_heads: 8
-    use_checkpoint: True
-    scale_factors: [ 2, 2, 2 ]
+    use_checkpoint: False
+    scale_factors: [ 5, 4, 2 ]
 
 data:
   target: datasets.util.DataModuleFromConfig
@@ -35,21 +35,21 @@ data:
     train:
       target: datasets.arknights.ArknightsDataset
       params:
-        root: '/local_datasets/anime'
-        # root: 'D:/datasets/edge_detection/anime'
+        # root: '/local_datasets/anime'
+        root: 'D:/datasets/edge_detection/anime'
         train: True
-        size: [512, 512]
-        scale: [ 0.75, 1.0 ]
+        size: [520, 520]
+        scale: [ 0.5, 1.0 ]
         color_space: 'rgb'
 
     validation:
       target: datasets.arknights.ArknightsDataset
       params:
-        root: '/local_datasets/anime'
-        # root: 'D:/datasets/edge_detection/anime'
+        # root: '/local_datasets/anime'
+        root: 'D:/datasets/edge_detection/anime'
         train: False
-        size: [512, 512]
-        scale: [ 0.75, 1.0 ]
+        size: [520, 520]
+        scale: [ 0.5, 1.0 ]
         color_space: 'rgb'
 
 logger:
@@ -92,4 +92,4 @@ trainer:
   accelerator: 'gpu'
   max_epochs: 300
   accumulate_grad_batches: 5
-  # precision: 'bf16-true'
+  precision: 'bf16'

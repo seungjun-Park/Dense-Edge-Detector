@@ -77,6 +77,8 @@ def main():
     with trainer.init_module():
         model: Model = instantiate_from_config(config.module)
 
+    model = torch.compile(model)
+
     trainer.fit(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
     # trainer.test(model=model)
 

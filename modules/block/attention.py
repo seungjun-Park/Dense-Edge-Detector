@@ -3,10 +3,10 @@ from abc import abstractmethod
 
 import torch
 import torch.nn as nn
-from flash_attn import flash_attn_func, flash_attn_qkvpacked_func
+from flash_attn import flash_attn_qkvpacked_func
 
 from modules.block import Block
-from modules.mlp import MLP
+from modules.block.mlp import MLP
 
 
 class AttentionBlock(Block):

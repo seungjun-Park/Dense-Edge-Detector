@@ -3,7 +3,7 @@ import torch.nn as nn
 from abc import ABC, abstractmethod
 
 from utils.checkpoints import checkpoint
-from modules.norm import LayerNorm
+from modules.norm.layer_norm import LayerNorm
 
 
 class Block(nn.Module, ABC):

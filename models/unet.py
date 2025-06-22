@@ -1,22 +1,19 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.cuda.amp import autocast
 
-from typing import Union, List, Tuple, Type
+from typing import Union, List, Tuple
 from collections.abc import Iterable
 
 from torch.nn import InstanceNorm2d
 
 from models.model import Model
-from modules.down import DownBlock
-from modules.up import UpBlock
-from modules.res_block import ResidualBlock
-from modules.conv_next import ConvNextV2Block, LocalConvNextV2Block
-from modules.attention import FlashAttentionBlock
-from modules.norm import LayerNorm, GlobalResponseNorm
+from modules.downsample.conv import ConvDownSample
+from modules.norm.layer_norm import LayerNorm
+from modules.upsample.pixel_shuffle import PixelShuffleUpSample
+from modules.block.conv_next import LocalConvNextV2Block
+from modules.norm.grn import GlobalResponseNorm
 from utils.load_module import load_module
-from utils import zero_module
 
 
 class UNet(Model):
@@ -49,13 +46,13 @@ class UNet(Model):
 
         self.encoder.append(
             nn.Sequential(
-                nn.Conv2d(
-                    in_channels,
-                    embed_dim,
-                    kernel_size=self.scale_factor,
-                    stride=self.scale_factor,
-                ),
-                InstanceNorm2d(embed_dim)
+                ConvDownSample(
+                    in_channels=in_channels,
+                    out_channels=embed_dim,
+                    scale_factor=self.scale_factor,
+                    use_checkpoint=use_checkpoint,
+                    activation=activation,
+                )
             )
         )
 
@@ -77,11 +74,12 @@ class UNet(Model):
 
             if i != len(hidden_dims):
                 self.encoder.append(
-                    DownBlock(
+                    ConvDownSample(
                         in_channels=in_ch,
                         out_channels=out_ch,
                         scale_factor=scale_factors[i],
                         use_checkpoint=use_checkpoint,
+                        activation=activation,
                     )
                 )
 
@@ -93,7 +91,13 @@ class UNet(Model):
                 use_checkpoint=use_checkpoint,
                 activation=activation,
                 drop_path=drop_path,
-            )
+            ),
+            LocalConvNextV2Block(
+                in_channels=in_ch,
+                use_checkpoint=use_checkpoint,
+                activation=activation,
+                drop_path=drop_path,
+            ),
         )
 
         hidden_dims.pop()
@@ -102,12 +106,12 @@ class UNet(Model):
         for i, out_ch in list(enumerate(hidden_dims))[::-1]:
             if i != len(hidden_dims):
                 self.decoder.append(
-                    UpBlock(
+                    PixelShuffleUpSample(
                         in_channels=in_ch,
                         out_channels=out_ch,
                         scale_factor=scale_factors[i],
-                        mode=mode,
                         use_checkpoint=use_checkpoint,
+                        activation=activation,
                     )
                 )
 
@@ -124,11 +128,16 @@ class UNet(Model):
                     )
                 )
 
-        in_ch = in_ch + skip_dims.pop()
-
         make_activation = load_module(activation)
 
         self.out = nn.Sequential(
+            PixelShuffleUpSample(
+                in_channels=in_ch,
+                out_channels=in_ch,
+                scale_factor=self.scale_factor,
+                use_checkpoint=use_checkpoint,
+                activation=activation,
+            ),
             nn.Conv2d(
                 in_ch,
                 in_ch,
@@ -136,12 +145,15 @@ class UNet(Model):
                 padding=1,
                 groups=in_ch,
             ),
-            nn.InstanceNorm2d(in_ch),
+            LayerNorm(in_ch),
             nn.Conv2d(in_ch, in_ch * 4, kernel_size=1),
             make_activation(),
             GlobalResponseNorm(in_ch * 4),
             nn.Conv2d(in_ch * 4, out_channels, kernel_size=1),
+            nn.Sigmoid(),
         )
+
+        self.save_hyperparameters()
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         outputs = inputs
@@ -149,18 +161,16 @@ class UNet(Model):
         skips = []
         for block in self.encoder:
             outputs = block(outputs)
-            if not isinstance(block, DownBlock):
+            if not isinstance(block, ConvDownSample):
                 skips.append(outputs)
 
         outputs = self.bottle_neck(outputs)
 
         for block in self.decoder:
-            if not isinstance(block, UpBlock):
+            if not isinstance(block, PixelShuffleUpSample):
                 outputs = torch.cat([outputs, skips.pop()], dim=1)
             outputs = block(outputs)
 
-        outputs = torch.cat([outputs, skips.pop()], dim=1)
-        outputs = F.interpolate(outputs, scale_factor=self.scale_factor, mode=self.mode)
-        outputs = self.out(outputs)
+        # outputs = torch.cat([outputs, skips.pop()], dim=1)
 
-        return outputs.clamp(min=0., max=1.0)
+        return self.out(outputs)

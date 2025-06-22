@@ -5,8 +5,8 @@ from typing import Union, List, Tuple, Type
 from collections.abc import Iterable
 
 from models.model import Model
-from modules.down import DownBlock
-from modules.up import UpBlock
+from modules.downsample.conv import DownBlock
+from modules.upsample.conv import UpBlock
 from utils.load_module import  load_module
 from utils.params import get_module_params
 

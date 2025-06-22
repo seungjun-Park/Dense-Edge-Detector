@@ -3,25 +3,24 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Union, List, Tuple, Type
 
-from modules.block import Block
-from modules.norm import LayerNorm
+from modules.upsample import UpSample
+from modules.norm.layer_norm import LayerNorm
 
 
-class UpBlock(Block):
+class ConvUpSample(UpSample):
     def __init__(self,
-                 scale_factor: int | float = 2.0,
                  mode: str = 'nearest',
                  *args,
                  **kwargs
                  ):
         super().__init__(*args, **kwargs)
+
         mode = mode.lower()
-        assert mode in ['nearest', 'linear', 'bilinear', 'bicubic', 'trilinear', 'area', 'nearest-eaxct']
+        assert mode in ['nearest', 'bilinear', 'bicubic', 'area', 'nearest-eaxct']
         self.mode = mode
-        self.scale_factor = int(scale_factor)
 
         self.up_layer = nn.Sequential(
-            nn.InstanceNorm2d(self.in_channels),
+            LayerNorm(self.in_channels),
             nn.Conv2d(
                 self.in_channels,
                 self.out_channels,

@@ -7,7 +7,8 @@ from typing import Union, List, Tuple, Type, Dict, Callable
 from utils import zero_module
 from utils.load_module import load_module
 from modules.block import Block
-from modules.norm import GlobalResponseNorm, LayerNorm
+from modules.norm.grn import GlobalResponseNorm
+from modules.norm.layer_norm import LayerNorm
 
 
 class ConvNextV2Block(Block):
@@ -30,9 +31,9 @@ class ConvNextV2Block(Block):
                 self.in_channels,
                 kernel_size=7,
                 padding=3,
-                groups=self.in_channels
+                groups=self.in_channels,
             ),
-            nn.InstanceNorm2d(self.in_channels),
+            LayerNorm(self.in_channels),
             nn.Conv2d(self.in_channels, embed_dim, kernel_size=1),
             make_activation(),
             GlobalResponseNorm(embed_dim),
@@ -47,13 +48,11 @@ class ConvNextV2Block(Block):
             self.shortcut = nn.Conv2d(
                 self.in_channels,
                 self.out_channels,
-                kernel_size=3,
-                padding=1,
+                kernel_size=1,
             )
 
     def _forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.drop_path(self.block(x)) + self.shortcut(x)
-
 
 class LocalConvNextV2Block(Block):
     def __init__(self,
@@ -77,7 +76,7 @@ class LocalConvNextV2Block(Block):
                 padding=1,
                 groups=self.in_channels
             ),
-            nn.InstanceNorm2d(self.in_channels),
+            LayerNorm(self.in_channels),
             nn.Conv2d(self.in_channels, embed_dim, kernel_size=1),
             make_activation(),
             GlobalResponseNorm(embed_dim),
@@ -89,11 +88,14 @@ class LocalConvNextV2Block(Block):
         if self.in_channels == self.out_channels:
             self.shortcut = nn.Identity()
         else:
-            self.shortcut = nn.Conv2d(
-                self.in_channels,
-                self.out_channels,
-                kernel_size=3,
-                padding=1,
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(
+                    self.in_channels,
+                    self.out_channels,
+                    kernel_size=3,
+                    padding=1,
+                ),
+                LayerNorm(self.out_channels),
             )
 
     def _forward(self, x: torch.Tensor) -> torch.Tensor:

@@ -145,7 +145,7 @@ class UNet(Model):
             nn.Conv2d(in_ch, in_ch * 4, kernel_size=1),
             make_activation(),
             GlobalResponseNorm(in_ch * 4),
-            nn.Conv2d(in_ch * 4, out_channels, kernel_size=1),
+            nn.Conv2d(in_ch * 4, out_channels, kernel_size=1, bias=False),
             nn.Sigmoid(),
         )
 

@@ -163,7 +163,7 @@ class UNet(Model):
         outputs = self.bottle_neck(outputs)
 
         for block in self.decoder:
-            if not isinstance(block, ConvTransposeUpSample):
+            if not isinstance(block, PixelShuffleUpSample):
                 outputs = torch.cat([outputs, skips.pop()], dim=1)
             outputs = block(outputs)
 

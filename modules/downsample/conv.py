@@ -19,7 +19,7 @@ class ConvDownSample(DownSample):
         self.scale_factor = int(self.scale_factor)
 
         self.down_layer = nn.Sequential(
-            LayerNorm(self.out_channels),
+            LayerNorm(self.in_channels),
             nn.Conv2d(
                 self.in_channels,
                 self.out_channels,

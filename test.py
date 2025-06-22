@@ -72,7 +72,7 @@ def test_modules():
 def test_torch_compile():
     x = torch.randn(1, 32, 216, 384).cuda()
 
-    module_1 = PixelShuffleUpSample(
+    module_1 = ConvTransposeUpSample(
         in_channels=32,
         out_channels=3,
         scale_factor=5

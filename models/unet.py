@@ -51,7 +51,6 @@ class UNet(Model):
                     out_channels=embed_dim,
                     scale_factor=self.scale_factor,
                     use_checkpoint=use_checkpoint,
-                    activation=activation,
                 )
             )
         )
@@ -79,7 +78,6 @@ class UNet(Model):
                         out_channels=out_ch,
                         scale_factor=scale_factors[i],
                         use_checkpoint=use_checkpoint,
-                        activation=activation,
                     )
                 )
 
@@ -111,7 +109,6 @@ class UNet(Model):
                         out_channels=out_ch,
                         scale_factor=scale_factors[i],
                         use_checkpoint=use_checkpoint,
-                        activation=activation,
                     )
                 )
 
@@ -136,7 +133,6 @@ class UNet(Model):
                 out_channels=in_ch,
                 scale_factor=self.scale_factor,
                 use_checkpoint=use_checkpoint,
-                activation=activation,
             ),
             nn.Conv2d(
                 in_ch,
@@ -171,6 +167,6 @@ class UNet(Model):
                 outputs = torch.cat([outputs, skips.pop()], dim=1)
             outputs = block(outputs)
 
-        # outputs = torch.cat([outputs, skips.pop()], dim=1)
+        outputs = torch.cat([outputs, skips.pop()], dim=1)
 
         return self.out(outputs)

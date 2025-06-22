@@ -11,25 +11,21 @@ from utils.load_module import load_module
 
 class ConvDownSample(DownSample):
     def __init__(self,
-                 activation: str = 'torch.nn.SiLU',
                  *args,
                  **kwargs
                  ):
         super().__init__(*args, **kwargs)
 
-        make_activation = load_module(activation)
-
         self.scale_factor = int(self.scale_factor)
 
         self.down_layer = nn.Sequential(
+            LayerNorm(self.out_channels),
             nn.Conv2d(
                 self.in_channels,
                 self.out_channels,
                 kernel_size=self.scale_factor,
                 stride=self.scale_factor,
             ),
-            LayerNorm(self.out_channels),
-            make_activation(),
         )
 
         self.shortcut = nn.Sequential(
@@ -43,7 +39,7 @@ class ConvDownSample(DownSample):
                 kernel_size=1,
             ) if self.in_channels != self.out_channels else
             nn.Identity(),
-            LayerNorm(self.out_channels)
+            LayerNorm(self.out_channels),
         )
 
     def _forward(self, x: torch.Tensor) -> torch.Tensor:

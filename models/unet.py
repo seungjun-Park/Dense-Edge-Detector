@@ -10,7 +10,7 @@ from torch.nn import InstanceNorm2d
 from models.model import Model
 from modules.downsample.conv import ConvDownSample
 from modules.norm.layer_norm import LayerNorm
-from modules.upsample.pixel_shuffle import PixelShuffleUpSample
+from modules.upsample.conv_tranpose import ConvTransposeUpSample
 from modules.block.conv_next import LocalConvNextV2Block
 from modules.norm.grn import GlobalResponseNorm
 from utils.load_module import load_module
@@ -104,7 +104,7 @@ class UNet(Model):
         for i, out_ch in list(enumerate(hidden_dims))[::-1]:
             if i != len(hidden_dims):
                 self.decoder.append(
-                    PixelShuffleUpSample(
+                    ConvTransposeUpSample(
                         in_channels=in_ch,
                         out_channels=out_ch,
                         scale_factor=scale_factors[i],
@@ -128,7 +128,7 @@ class UNet(Model):
         make_activation = load_module(activation)
 
         self.out = nn.Sequential(
-            PixelShuffleUpSample(
+            ConvTransposeUpSample(
                 in_channels=in_ch + skip_dims.pop(),
                 out_channels=in_ch,
                 scale_factor=self.scale_factor,
@@ -163,7 +163,7 @@ class UNet(Model):
         outputs = self.bottle_neck(outputs)
 
         for block in self.decoder:
-            if not isinstance(block, PixelShuffleUpSample):
+            if not isinstance(block, ConvTransposeUpSample):
                 outputs = torch.cat([outputs, skips.pop()], dim=1)
             outputs = block(outputs)
 

@@ -26,4 +26,9 @@ class ConvTransposeUpSample(UpSample):
         )
 
     def _forward(self, x: torch.Tensor):
-        return self.conv_t(self.norm(x))
+        x = self.norm(x)
+        # Unable to torch.compile.
+        # nn.ConvTranspose can not be optimized by triton backend.(Occur fallback)
+        with torch._dynamo.disable():
+            x = self.conv_t(x)
+        return x

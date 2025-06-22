@@ -19,7 +19,7 @@ class PixelShuffleUpSample(UpSample):
             LayerNorm(self.in_channels),
             nn.Conv2d(
                 self.in_channels,
-                self.out_channels * (self.scale_factor ** 2),
+                self.in_channels * (self.scale_factor ** 2),
                 kernel_size=3,
                 padding=1,
             ),
@@ -27,5 +27,12 @@ class PixelShuffleUpSample(UpSample):
 
         self.pixel_shuffle = nn.PixelShuffle(int(self.scale_factor))
 
+        self.conv = nn.Conv2d(
+            self.in_channels,
+            self.out_channels,
+            kernel_size=3,
+            padding=1,
+        )
+
     def _forward(self, x: torch.Tensor):
-        return self.pixel_shuffle(self.sub_pix_conv(x))
+        return self.conv(self.pixel_shuffle(self.sub_pix_conv(x)))

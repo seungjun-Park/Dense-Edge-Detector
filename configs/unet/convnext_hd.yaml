@@ -11,7 +11,7 @@ module:
       params:
         lpips_weight: 1.0
         l1_weight: 1.0
-        ssim_weight: 1.0
+        ssim_weight: 0.0
         content_weight: 0.4
 
     in_channels: 3
@@ -92,4 +92,4 @@ trainer:
   accelerator: 'gpu'
   max_epochs: 300
   accumulate_grad_batches: 5
-  precision: 'bf16'
+  # precision: 'bf16'

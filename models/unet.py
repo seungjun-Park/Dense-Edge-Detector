@@ -9,8 +9,9 @@ from torch.nn import InstanceNorm2d
 
 from models.model import Model
 from modules.downsample.conv import ConvDownSample
+from modules.downsample.patch_merging import PatchMerging
 from modules.norm.layer_norm import LayerNorm
-from modules.upsample.pixel_shuffle import PixelShuffleUpSample
+from modules.upsample.patch_expanding import PatchExpanding
 from modules.block.conv_next import LocalConvNextV2Block
 from modules.norm.grn import GlobalResponseNorm
 from utils.load_module import load_module
@@ -46,7 +47,7 @@ class UNet(Model):
 
         self.encoder.append(
             nn.Sequential(
-                ConvDownSample(
+                PatchMerging(
                     in_channels=in_channels,
                     out_channels=embed_dim,
                     scale_factor=self.scale_factor,
@@ -73,7 +74,7 @@ class UNet(Model):
 
             if i != len(hidden_dims):
                 self.encoder.append(
-                    ConvDownSample(
+                    PatchMerging(
                         in_channels=in_ch,
                         out_channels=out_ch,
                         scale_factor=scale_factors[i],
@@ -104,7 +105,7 @@ class UNet(Model):
         for i, out_ch in list(enumerate(hidden_dims))[::-1]:
             if i != len(hidden_dims):
                 self.decoder.append(
-                    PixelShuffleUpSample(
+                    PatchExpanding(
                         in_channels=in_ch,
                         out_channels=out_ch,
                         scale_factor=scale_factors[i],
@@ -128,7 +129,7 @@ class UNet(Model):
         make_activation = load_module(activation)
 
         self.out = nn.Sequential(
-            PixelShuffleUpSample(
+            PatchExpanding(
                 in_channels=in_ch + skip_dims.pop(),
                 out_channels=in_ch,
                 scale_factor=self.scale_factor,

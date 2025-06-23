@@ -4,6 +4,7 @@ import torch.nn as nn
 from modules.norm.layer_norm import LayerNorm
 from modules.block.conv_next import LocalConvNextV2Block
 from modules.downsample.conv import ConvDownSample
+from modules.downsample.patch_merging import PatchMerging
 from modules.block.mb_conv import FusedMBConvBlock
 from modules.upsample.pixel_shuffle import PixelShuffleUpSample
 from modules.upsample.conv import ConvUpSample
@@ -23,17 +24,17 @@ def timed(fn):
 
 
 def test_modules():
-    x = torch.randn(1, 32, 216, 384).cuda()
+    x = torch.randn(1, 3, 1080, 1920).cuda()
 
-    module_1 = PixelShuffleUpSample(
-        in_channels=32,
-        out_channels=3,
+    module_1 = ConvDownSample(
+        in_channels=3,
+        out_channels=32,
         scale_factor=5
     ).cuda()
 
-    module_2 = ConvTransposeUpSample(
-        in_channels=32,
-        out_channels=3,
+    module_2 = PatchMerging(
+        in_channels=3,
+        out_channels=32,
         scale_factor=5,
     ).cuda()
 
@@ -70,12 +71,12 @@ def test_modules():
     print("~" * 10)
 
 def test_torch_compile():
-    x = torch.randn(1, 32, 216, 384).cuda()
+    x = torch.randn(1, 3, 1080, 1920).cuda()
 
-    module_1 = ConvTransposeUpSample(
-        in_channels=32,
-        out_channels=3,
-        scale_factor=5
+    module_1 = PatchMerging(
+        in_channels=3,
+        out_channels=32,
+        scale_factor=5,
     ).cuda()
 
     module_2 = torch.compile(

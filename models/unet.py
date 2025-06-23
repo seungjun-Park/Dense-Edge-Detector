@@ -158,13 +158,13 @@ class UNet(Model):
         skips = []
         for block in self.encoder:
             outputs = block(outputs)
-            if not isinstance(block, ConvDownSample):
+            if not isinstance(block, PatchMerging):
                 skips.append(outputs)
 
         outputs = self.bottle_neck(outputs)
 
         for block in self.decoder:
-            if not isinstance(block, PixelShuffleUpSample):
+            if not isinstance(block, PatchExpanding):
                 outputs = torch.cat([outputs, skips.pop()], dim=1)
             outputs = block(outputs)
 

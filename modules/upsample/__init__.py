@@ -7,7 +7,6 @@ from modules.block import Block
 class UpSample(Block):
     def __init__(self,
                  scale_factor: int | float = 2.0,
-                 mode: str = 'nearest',
                  *args,
                  **kwargs
                  ):

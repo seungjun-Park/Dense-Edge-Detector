@@ -5,16 +5,15 @@ import torch.nn.functional as F
 from typing import Union, List, Tuple
 from collections.abc import Iterable
 
-from torch.nn import InstanceNorm2d
 
 from models.model import Model
 from modules.downsample.conv import ConvDownSample
-from modules.downsample.patch_merging import PatchMerging
 from modules.norm.layer_norm import LayerNorm
-from modules.upsample.patch_expanding import PatchExpanding
-from modules.block.conv_next import LocalConvNextV2Block
-from modules.norm.grn import GlobalResponseNorm
+from modules.upsample.conv import ConvUpSample
+from modules.block.attention import FlashAttentionBlock
+from modules.block.conv_next import ConvNextV2Block
 from utils.load_module import load_module
+from modules.block.squeeze_excitation import SEBlock
 
 
 class UNet(Model):
@@ -22,10 +21,12 @@ class UNet(Model):
                  in_channels: int,
                  embed_dim: int,
                  out_channels: int = None,
-                 hidden_dims: Union[List[int], Tuple[int]] = (32, 64, 128, 256),
                  num_blocks: Union[int, List[int], Tuple[int]] = 2,
+                 block_types: str | List[str] = [],
                  drop_path: float = 0.0,
                  activation: str = 'torch.nn.GELU',
+                 num_heads: int = 8,
+                 num_head_channels: int = None,
                  mode: str = 'nearest',
                  use_checkpoint: bool = True,
                  scale_factors: int | List[int] | Tuple[int] = 2,
@@ -34,35 +35,35 @@ class UNet(Model):
                  ):
         super(UNet, self).__init__(*args, **kwargs)
 
-        out_channels = out_channels if out_channels is not None else in_channels
+        assert len(block_types) == len(scale_factors)
 
-        self.hidden_dims = hidden_dims
+        out_channels = out_channels if out_channels is not None else in_channels
 
         self.encoder = nn.ModuleList()
         self.decoder = nn.ModuleList()
 
-        self.scale_factor = scale_factors.pop(0)
-        self.mode = mode.lower()
-        assert self.mode in ['nearest', 'linear', 'bilinear', 'bicubic', 'trilinear', 'area', 'nearest-eaxct']
-
         self.encoder.append(
             nn.Sequential(
-                PatchMerging(
-                    in_channels=in_channels,
-                    out_channels=embed_dim,
-                    scale_factor=self.scale_factor,
-                    use_checkpoint=use_checkpoint,
-                )
+                nn.Conv2d(
+                    in_channels,
+                    embed_dim,
+                    kernel_size=3,
+                    padding=1,
+                ),
+                LayerNorm(embed_dim)
             )
         )
 
         in_ch = embed_dim
-        skip_dims = [ embed_dim ]
 
-        for i, out_ch in enumerate(hidden_dims):
+        skip_dims = []
+
+        for i, sf in enumerate(scale_factors):
+            encoder = []
+            make_block = load_module(block_types[i])
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
-                self.encoder.append(
-                    LocalConvNextV2Block(
+                encoder.append(
+                    make_block(
                         in_channels=in_ch,
                         use_checkpoint=use_checkpoint,
                         activation=activation,
@@ -70,28 +71,34 @@ class UNet(Model):
                     )
                 )
 
-                skip_dims.append(in_ch)
+            self.encoder.append(*encoder)
 
-            if i != len(hidden_dims):
-                self.encoder.append(
-                    PatchMerging(
-                        in_channels=in_ch,
-                        out_channels=out_ch,
-                        scale_factor=scale_factors[i],
-                        use_checkpoint=use_checkpoint,
-                    )
+            skip_dims.append(in_ch)
+            self.encoder.append(
+                ConvDownSample(
+                    in_channels=in_ch,
+                    scale_factor=sf,
+                    use_checkpoint=use_checkpoint,
                 )
+            )
 
-                in_ch = out_ch
+            in_ch = int(in_ch * sf)
 
         self.bottle_neck = nn.Sequential(
-            LocalConvNextV2Block(
+            ConvNextV2Block(
                 in_channels=in_ch,
                 use_checkpoint=use_checkpoint,
                 activation=activation,
                 drop_path=drop_path,
             ),
-            LocalConvNextV2Block(
+            FlashAttentionBlock(
+                in_channels=in_ch,
+                num_heads=num_heads,
+                num_head_channels=num_head_channels,
+                activation=activation,
+                drop_path=drop_path,
+            ),
+            ConvNextV2Block(
                 in_channels=in_ch,
                 use_checkpoint=use_checkpoint,
                 activation=activation,
@@ -99,26 +106,26 @@ class UNet(Model):
             ),
         )
 
-        hidden_dims.pop()
-        hidden_dims.insert(0, embed_dim)
+        for i, sf in list(enumerate(scale_factors))[::-1]:
+            make_block = load_module(block_types[i])
 
-        for i, out_ch in list(enumerate(hidden_dims))[::-1]:
-            if i != len(hidden_dims):
-                self.decoder.append(
-                    PatchExpanding(
-                        in_channels=in_ch,
-                        out_channels=out_ch,
-                        scale_factor=scale_factors[i],
-                        use_checkpoint=use_checkpoint,
-                    )
+            self.decoder.append(
+                ConvUpSample(
+                    in_channels=in_ch,
+                    scale_factor=sf,
+                    mode=mode,
+                    use_checkpoint=use_checkpoint,
                 )
+            )
 
-                in_ch = out_ch
+            in_ch = int(in_ch * sf)
+
+            decoder = []
 
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
-                self.decoder.append(
-                    LocalConvNextV2Block(
-                        in_channels=in_ch + skip_dims.pop(),
+                decoder.append(
+                    make_block(
+                        in_channels=in_ch + skip_dims.pop() if j == 0 else in_ch,
                         out_channels=in_ch,
                         use_checkpoint=use_checkpoint,
                         activation=activation,
@@ -126,48 +133,40 @@ class UNet(Model):
                     )
                 )
 
-        make_activation = load_module(activation)
+            self.decoder.append(*decoder)
 
         self.out = nn.Sequential(
-            PatchExpanding(
-                in_channels=in_ch + skip_dims.pop(),
-                out_channels=in_ch,
-                scale_factor=self.scale_factor,
-                use_checkpoint=use_checkpoint,
+            LayerNorm(in_ch),
+            SEBlock(
+                in_channels=in_ch,
+                embed_ratio=2,
+                activation=activation,
             ),
             nn.Conv2d(
                 in_ch,
-                in_ch,
+                out_channels,
                 kernel_size=3,
                 padding=1,
-                groups=in_ch,
             ),
-            LayerNorm(in_ch),
-            nn.Conv2d(in_ch, in_ch * 4, kernel_size=1),
-            make_activation(),
-            GlobalResponseNorm(in_ch * 4),
-            nn.Conv2d(in_ch * 4, out_channels, kernel_size=1, bias=False),
             nn.Sigmoid(),
         )
 
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore='loss_config')
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         outputs = inputs
 
         skips = []
         for block in self.encoder:
-            outputs = block(outputs)
-            if not isinstance(block, PatchMerging):
+            if isinstance(block, ConvDownSample):
                 skips.append(outputs)
+            outputs = block(outputs)
 
         outputs = self.bottle_neck(outputs)
 
         for block in self.decoder:
-            if not isinstance(block, PatchExpanding):
+            if not isinstance(block, ConvUpSample):
                 outputs = torch.cat([outputs, skips.pop()], dim=1)
             outputs = block(outputs)
-
-        outputs = torch.cat([outputs, skips.pop()], dim=1)
 
         return self.out(outputs)

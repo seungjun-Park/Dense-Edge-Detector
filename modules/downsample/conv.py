@@ -5,8 +5,6 @@ from typing import Union, Tuple, List, Type, Dict
 
 from modules.downsample import DownSample
 from modules.norm.layer_norm import LayerNorm
-from modules.block.squeeze_excitation import SEBlock
-from utils.load_module import load_module
 
 
 class ConvDownSample(DownSample):
@@ -22,7 +20,7 @@ class ConvDownSample(DownSample):
             LayerNorm(self.in_channels),
             nn.Conv2d(
                 self.in_channels,
-                self.out_channels,
+                int(self.in_channels * self.scale_factor),
                 kernel_size=self.scale_factor,
                 stride=self.scale_factor,
             ),

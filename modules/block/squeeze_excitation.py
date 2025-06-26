@@ -7,7 +7,7 @@ from modules.block import Block
 
 class SEBlock(Block):
     def __init__(self,
-                 embed_ratio: int = 1,
+                 embed_ratio: int = 4,
                  activation: str = 'torch.nn.ReLU',
                  *args,
                  **kwargs,

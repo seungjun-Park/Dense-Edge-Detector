@@ -16,6 +16,7 @@ class ConvNextV2Block(Block):
                  activation: str = 'torch.nn.GELU',
                  embed_ratio: float | int = 4.0,
                  drop_path: float = 0.0,
+                 use_conv: bool = True,
                  *args,
                  **kwargs
                  ):
@@ -44,6 +45,15 @@ class ConvNextV2Block(Block):
 
         if self.in_channels == self.out_channels:
             self.shortcut = nn.Identity()
+
+        elif use_conv:
+            self.shortcut = nn.Conv2d(
+                self.in_channels,
+                self.out_channels,
+                kernel_size=3,
+                padding=1,
+            )
+
         else:
             self.shortcut = nn.Conv2d(
                 self.in_channels,

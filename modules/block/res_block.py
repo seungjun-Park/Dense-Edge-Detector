@@ -7,7 +7,7 @@ from typing import Union, List, Tuple, Type, Dict, Callable
 from utils import zero_module
 from utils.load_module import load_module
 from modules.block import Block
-from modules.norm import GlobalResponseNorm, LayerNorm
+from modules.norm.layer_norm import LayerNorm
 
 
 class ResidualBlock(Block):

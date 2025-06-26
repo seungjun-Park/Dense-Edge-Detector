@@ -9,7 +9,7 @@ from modules.norm.layer_norm import LayerNorm
 
 class ConvUpSample(UpSample):
     def __init__(self,
-                 mode: str = 'nearest',
+                 mode: str = 'bilinear',
                  *args,
                  **kwargs
                  ):
@@ -23,7 +23,7 @@ class ConvUpSample(UpSample):
             LayerNorm(self.in_channels),
             nn.Conv2d(
                 self.in_channels,
-                self.out_channels,
+                self.in_channels // self.scale_factor,
                 kernel_size=3,
                 padding=1,
             )

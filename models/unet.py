@@ -56,7 +56,6 @@ class UNet(Model):
         skip_dims = []
 
         for i, sf in enumerate(scale_factors):
-            encoder = []
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
                 self.encoder.append(
                     ResidualBlock(
@@ -106,8 +105,6 @@ class UNet(Model):
 
             in_ch = int(in_ch // sf)
 
-            decoder = []
-
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
                 self.decoder.append(
                     ResidualBlock(
@@ -129,7 +126,7 @@ class UNet(Model):
             nn.Sigmoid(),
         )
 
-        self.save_hyperparameters(ignore='loss_config')
+        self.save_hyperparameters()
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         outputs = inputs

@@ -71,7 +71,7 @@ class UNet(Model):
                     )
                 )
 
-            self.encoder.append(*encoder)
+            self.encoder.append(nn.Sequential(*encoder))
 
             skip_dims.append(in_ch)
             self.encoder.append(
@@ -118,7 +118,7 @@ class UNet(Model):
                 )
             )
 
-            in_ch = int(in_ch * sf)
+            in_ch = int(in_ch // sf)
 
             decoder = []
 
@@ -133,7 +133,7 @@ class UNet(Model):
                     )
                 )
 
-            self.decoder.append(*decoder)
+            self.decoder.append(nn.Sequential(*decoder))
 
         self.out = nn.Sequential(
             LayerNorm(in_ch),

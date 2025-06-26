@@ -11,7 +11,7 @@ from modules.downsample.conv import ConvDownSample
 from modules.norm.layer_norm import LayerNorm
 from modules.upsample.conv import ConvUpSample
 from modules.block.attention import FlashAttentionBlock
-from modules.block.conv_next import ConvNextV2Block
+from modules.block.res_block import ResidualBlock
 from utils.load_module import load_module
 from modules.block.squeeze_excitation import SEBlock
 
@@ -22,7 +22,6 @@ class UNet(Model):
                  embed_dim: int,
                  out_channels: int = None,
                  num_blocks: Union[int, List[int], Tuple[int]] = 2,
-                 block_types: str | List[str] = [],
                  drop_path: float = 0.0,
                  activation: str = 'torch.nn.GELU',
                  num_heads: int = 8,
@@ -34,8 +33,6 @@ class UNet(Model):
                  **kwargs,
                  ):
         super(UNet, self).__init__(*args, **kwargs)
-
-        assert len(block_types) == len(scale_factors)
 
         out_channels = out_channels if out_channels is not None else in_channels
 
@@ -60,10 +57,9 @@ class UNet(Model):
 
         for i, sf in enumerate(scale_factors):
             encoder = []
-            make_block = load_module(block_types[i])
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
                 encoder.append(
-                    make_block(
+                    ResidualBlock(
                         in_channels=in_ch,
                         use_checkpoint=use_checkpoint,
                         activation=activation,
@@ -85,7 +81,7 @@ class UNet(Model):
             in_ch = int(in_ch * sf)
 
         self.bottle_neck = nn.Sequential(
-            ConvNextV2Block(
+            ResidualBlock(
                 in_channels=in_ch,
                 use_checkpoint=use_checkpoint,
                 activation=activation,
@@ -98,7 +94,7 @@ class UNet(Model):
                 activation=activation,
                 drop_path=drop_path,
             ),
-            ConvNextV2Block(
+            ResidualBlock(
                 in_channels=in_ch,
                 use_checkpoint=use_checkpoint,
                 activation=activation,
@@ -107,8 +103,6 @@ class UNet(Model):
         )
 
         for i, sf in list(enumerate(scale_factors))[::-1]:
-            make_block = load_module(block_types[i])
-
             self.decoder.append(
                 ConvUpSample(
                     in_channels=in_ch,
@@ -124,7 +118,7 @@ class UNet(Model):
 
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
                 decoder.append(
-                    make_block(
+                    ResidualBlock(
                         in_channels=in_ch + skip_dims.pop() if j == 0 else in_ch,
                         out_channels=in_ch,
                         use_checkpoint=use_checkpoint,
@@ -137,11 +131,11 @@ class UNet(Model):
 
         self.out = nn.Sequential(
             LayerNorm(in_ch),
-            SEBlock(
-                in_channels=in_ch,
-                embed_ratio=2,
-                activation=activation,
-            ),
+            # SEBlock(
+            #     in_channels=in_ch,
+            #     embed_ratio=2,
+            #     activation=activation,
+            # ),
             nn.Conv2d(
                 in_ch,
                 out_channels,

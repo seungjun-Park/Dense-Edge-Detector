@@ -58,7 +58,7 @@ class UNet(Model):
         for i, sf in enumerate(scale_factors):
             encoder = []
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
-                encoder.append(
+                self.encoder.append(
                     ResidualBlock(
                         in_channels=in_ch,
                         use_checkpoint=use_checkpoint,
@@ -66,10 +66,8 @@ class UNet(Model):
                         drop_path=drop_path,
                     )
                 )
+                skip_dims.append(in_ch)
 
-            self.encoder.append(nn.Sequential(*encoder))
-
-            skip_dims.append(in_ch)
             self.encoder.append(
                 ConvDownSample(
                     in_channels=in_ch,
@@ -94,12 +92,6 @@ class UNet(Model):
                 activation=activation,
                 drop_path=drop_path,
             ),
-            ResidualBlock(
-                in_channels=in_ch,
-                use_checkpoint=use_checkpoint,
-                activation=activation,
-                drop_path=drop_path,
-            ),
         )
 
         for i, sf in list(enumerate(scale_factors))[::-1]:
@@ -117,17 +109,15 @@ class UNet(Model):
             decoder = []
 
             for j in range(num_blocks[i] if isinstance(num_blocks, Iterable) else num_blocks):
-                decoder.append(
+                self.decoder.append(
                     ResidualBlock(
-                        in_channels=in_ch + skip_dims.pop() if j == 0 else in_ch,
+                        in_channels=in_ch + skip_dims.pop(),
                         out_channels=in_ch,
                         use_checkpoint=use_checkpoint,
                         activation=activation,
                         drop_path=drop_path,
                     )
                 )
-
-            self.decoder.append(nn.Sequential(*decoder))
 
         self.out = nn.Sequential(
             nn.Conv2d(
@@ -146,9 +136,9 @@ class UNet(Model):
 
         skips = []
         for block in self.encoder:
-            if isinstance(block, ConvDownSample):
-                skips.append(outputs)
             outputs = block(outputs)
+            if not isinstance(block, ConvDownSample):
+                skips.append(outputs)
 
         outputs = self.bottle_neck(outputs)
 

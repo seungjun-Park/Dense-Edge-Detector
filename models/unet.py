@@ -130,12 +130,6 @@ class UNet(Model):
             self.decoder.append(nn.Sequential(*decoder))
 
         self.out = nn.Sequential(
-            LayerNorm(in_ch),
-            # SEBlock(
-            #     in_channels=in_ch,
-            #     embed_ratio=2,
-            #     activation=activation,
-            # ),
             nn.Conv2d(
                 in_ch,
                 out_channels,

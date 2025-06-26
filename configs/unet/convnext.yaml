@@ -22,7 +22,7 @@ module:
     activation: 'torch.nn.GELU'
     mode: 'bilinear'
     num_head_channels: 8
-    use_checkpoint: True
+    use_checkpoint: False
     scale_factors: [ 2, 2, 2 ]
     block_types: [ 'modules.block.res_block.ResidualBlock', 'modules.block.res_block.ResidualBlock', 'modules.block.conv_next.ConvNextV2Block']
 

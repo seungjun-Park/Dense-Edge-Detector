@@ -76,7 +76,7 @@ class Model(pl.LightningModule, ABC):
 
         loss, loss_log = self.loss(inputs, targets, outputs, split='train' if self.training else 'valid')
 
-        with torch.compiler.disable():
+        with torch._dynamo.disable():
             if self.global_step % self.log_interval == 0:
                 self.log_images(inputs, targets, outputs)
 

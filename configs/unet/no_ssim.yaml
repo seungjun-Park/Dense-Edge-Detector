@@ -56,14 +56,14 @@ logger:
   params:
     save_dir: './logs'
     name: 'unet'
-    version: 'with_lpips'
+    version: 'no_ssim'
 
 
 checkpoints:
   latest_checkpoints:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/with_lpips'
+      dirpath: './checkpoints/unet/no_ssim'
       filename: 'last'
       monitor: 'step'
       mode: 'max'
@@ -72,7 +72,7 @@ checkpoints:
   best_checkpoint:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/with_lpips'
+      dirpath: './checkpoints/unet/no_ssim'
       filename: 'best'
       monitor: 'valid/total_loss'
       mode: 'min'
@@ -80,6 +80,6 @@ checkpoints:
 
 trainer:
   accelerator: 'gpu'
-  max_epochs: 300
+  max_epochs: 200
   accumulate_grad_batches: 5
   # precision: 'bf16'

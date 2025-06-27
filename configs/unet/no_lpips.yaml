@@ -9,10 +9,10 @@ module:
     loss_config:
       target: losses.l1lpips.L1LPIPS
       params:
-        lpips_weight: 1.0
+        lpips_weight: 0.0
         l1_weight: 1.0
         ssim_weight: 1.0
-        content_weight: 0.0
+        content_weight: 0.5
 
     in_channels: 3
     embed_dim: 32
@@ -56,14 +56,14 @@ logger:
   params:
     save_dir: './logs'
     name: 'unet'
-    version: 'with_ssim'
+    version: 'no_lpips'
 
 
 checkpoints:
   latest_checkpoints:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/with_ssim'
+      dirpath: './checkpoints/unet/no_lpips'
       filename: 'last'
       monitor: 'step'
       mode: 'max'
@@ -72,7 +72,7 @@ checkpoints:
   best_checkpoint:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/with_ssim'
+      dirpath: './checkpoints/unet/no_lpips'
       filename: 'best'
       monitor: 'valid/total_loss'
       mode: 'min'

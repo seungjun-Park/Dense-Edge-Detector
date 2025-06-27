@@ -62,17 +62,16 @@ class Model(pl.LightningModule, ABC):
         pass
 
     def add_noise(self, inputs: torch.Tensor) -> torch.Tensor:
-        noise = torch.randn(inputs.shape).to(inputs.device)
-        prob = min(self.add_noise_ratio, random.random())
-        inputs = inputs + prob * noise
+        if random.random() < self.add_noise_prob and self.training:
+            noise = torch.randn(inputs.shape).to(inputs.device)
+            prob = min(self.add_noise_ratio, random.random())
+            inputs = inputs + prob * noise
 
         return inputs
 
     def step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
         inputs, targets = batch
-        if random.random() < self.add_noise_prob and self.training:
-            inputs = self.add_noise(inputs)
-        outputs = self(inputs)
+        outputs = self(self.add_noise(inputs))
 
         loss, loss_log = self.loss(inputs, targets, outputs, split='train' if self.training else 'valid')
 

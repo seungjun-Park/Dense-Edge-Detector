@@ -1,4 +1,5 @@
 import math
+import random
 
 import torch
 import torch.nn as nn
@@ -22,6 +23,8 @@ class Model(pl.LightningModule, ABC):
                  log_interval: int = 100,
                  ckpt_path: str = None,
                  ignore_keys: Union[List[str], Tuple[str]] = (),
+                 add_noise_prob: float = 0.5,
+                 add_noise_ratio: float = 0.15,
                  *args,
                  **ignored_kwargs,
                  ):
@@ -31,6 +34,8 @@ class Model(pl.LightningModule, ABC):
         self.weight_decay = weight_decay
         self.lr_decay_epoch = lr_decay_epoch
         self.log_interval = log_interval
+        self.add_noise_ratio = add_noise_ratio
+        self.add_noise_prob = add_noise_prob
 
         if loss_config is not None:
             self.loss: Loss = instantiate_from_config(loss_config).eval()
@@ -58,14 +63,15 @@ class Model(pl.LightningModule, ABC):
 
     def add_noise(self, inputs: torch.Tensor) -> torch.Tensor:
         noise = torch.randn(inputs.shape).to(inputs.device)
-        prob = torch.bernoulli(torch.full_like(noise, 0.1 * self.current_epoch / self.trainer.max_epochs))
+        prob = min(self.add_noise_ratio, random.random())
         inputs = inputs + prob * noise
 
         return inputs
 
     def step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
         inputs, targets = batch
-        # inputs = self.add_noise(inputs)
+        if random.random() < self.add_noise_prob:
+            inputs = self.add_noise(inputs)
         outputs = self(inputs)
 
         loss, loss_log = self.loss(inputs, targets, outputs, split='train' if self.training else 'valid')

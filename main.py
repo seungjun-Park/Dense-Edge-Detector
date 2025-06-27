@@ -65,6 +65,7 @@ def main():
         callbacks=callbacks,
         enable_progress_bar=False,
         detect_anomaly=False,
+        compile=True,
         **trainer_configs
     )
 
@@ -77,7 +78,7 @@ def main():
     with trainer.init_module():
         model: Model = instantiate_from_config(config.module)
 
-    model = torch.compile(model)
+    model = torch.compile(model, mode='reduce-overhead')
 
     trainer.fit(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
     # trainer.test(model=model)

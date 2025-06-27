@@ -65,7 +65,6 @@ def main():
         callbacks=callbacks,
         enable_progress_bar=False,
         detect_anomaly=False,
-        compile=True,
         **trainer_configs
     )
 

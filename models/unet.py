@@ -84,13 +84,13 @@ class UNet(Model):
                 activation=activation,
                 drop_path=drop_path,
             ),
-            FlashAttentionBlock(
-                in_channels=in_ch,
-                num_heads=num_heads,
-                num_head_channels=num_head_channels,
-                activation=activation,
-                drop_path=drop_path,
-            ),
+            # FlashAttentionBlock(
+            #     in_channels=in_ch,
+            #     num_heads=num_heads,
+            #     num_head_channels=num_head_channels,
+            #     activation=activation,
+            #     drop_path=drop_path,
+            # ),
         )
 
         for i, sf in list(enumerate(scale_factors))[::-1]:

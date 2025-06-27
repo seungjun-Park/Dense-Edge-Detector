@@ -90,7 +90,6 @@ class Model(pl.LightningModule, ABC):
     def validation_step(self, batch, batch_idx):
         return self.step(batch, batch_idx)
 
-    @torch.compiler.disable
     @torch.no_grad()
     def log_images(self, inputs: torch.Tensor, targets: torch.Tensor, outputs: torch.Tensor):
         prefix = 'train' if self.training else 'val'

@@ -76,11 +76,10 @@ class Model(pl.LightningModule, ABC):
 
         loss, loss_log = self.loss(inputs, targets, outputs, split='train' if self.training else 'valid')
 
-        with torch._dynamo.disable():
-            if self.global_step % self.log_interval == 0:
-                self.log_images(inputs, targets, outputs)
+        if self.global_step % self.log_interval == 0:
+            self.log_images(inputs, targets, outputs)
 
-            self.log_dict(loss_log, prog_bar=True)
+        self.log_dict(loss_log, prog_bar=True)
 
         return loss
 
@@ -91,6 +90,7 @@ class Model(pl.LightningModule, ABC):
     def validation_step(self, batch, batch_idx):
         return self.step(batch, batch_idx)
 
+    @torch.compiler.disable
     @torch.no_grad()
     def log_images(self, inputs: torch.Tensor, targets: torch.Tensor, outputs: torch.Tensor):
         prefix = 'train' if self.training else 'val'

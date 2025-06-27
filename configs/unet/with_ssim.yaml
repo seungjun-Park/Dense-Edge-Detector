@@ -5,30 +5,25 @@ module:
     weight_decay: 0.0
     lr_decay_epoch: 100
     use_fp16: False
-    log_interval: 30
+    log_interval: 6
     loss_config:
       target: losses.l1lpips.L1LPIPS
       params:
         lpips_weight: 1.0
         l1_weight: 1.0
-        content_weight: 0.3
+        ssim_weight: 1.0
+        content_weight: 0.0
 
     in_channels: 3
-    embed_dim: 16
+    embed_dim: 32
     out_channels: 1
-    hidden_dims: [ 32, 64, 128, 256 ]
     num_blocks: 2
-    dropout: 0.0
     drop_path: 0.1
-    conv: 'torch.nn.Conv2d'
     activation: 'torch.nn.GELU'
-    norm: 'torch.nn.GroupNorm'
-    num_groups: 1
-    pooling: 'torch.nn.Conv2d'
-    mode: 'nearest'
-    block: 'modules.res_block.ResidualBlock'
-    use_checkpoint: True
-
+    mode: 'bilinear'
+    num_heads: 8
+    use_checkpoint: False
+    scale_factors: [ 2, 2, 2 ]
 
 data:
   target: datasets.util.DataModuleFromConfig
@@ -42,8 +37,8 @@ data:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/edge_detection/anime'
         train: True
-        size: 512
-        scale: [ 0.25, 1.0 ]
+        size: [512, 512]
+        scale: [ 0.5, 1.0 ]
         color_space: 'rgb'
 
     validation:
@@ -52,8 +47,8 @@ data:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/edge_detection/anime'
         train: False
-        size: 512
-        scale: [ 0.25, 1.0 ]
+        size: [512, 512]
+        scale: [ 0.5, 1.0 ]
         color_space: 'rgb'
 
 logger:
@@ -61,14 +56,14 @@ logger:
   params:
     save_dir: './logs'
     name: 'unet'
-    version: 'layer_norm'
+    version: 'with_ssim'
 
 
 checkpoints:
   latest_checkpoints:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/layer_norm'
+      dirpath: './checkpoints/unet/with_ssim'
       filename: 'last'
       monitor: 'step'
       mode: 'max'
@@ -77,7 +72,7 @@ checkpoints:
   best_checkpoint:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/layer_norm'
+      dirpath: './checkpoints/unet/with_ssim'
       filename: 'best'
       monitor: 'valid/total_loss'
       mode: 'min'
@@ -85,5 +80,6 @@ checkpoints:
 
 trainer:
   accelerator: 'gpu'
-  max_epochs: 300
-  accumulate_grad_batches: 1
+  max_epochs: 200
+  accumulate_grad_batches: 5
+  # precision: 'bf16'

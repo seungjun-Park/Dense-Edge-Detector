@@ -10,10 +10,8 @@ from models.model import Model
 from modules.downsample.conv import ConvDownSample
 from modules.norm.layer_norm import LayerNorm
 from modules.upsample.conv import ConvUpSample
-from modules.block.attention import FlashAttentionBlock
 from modules.block.res_block import ResidualBlock
 from utils.load_module import load_module
-from modules.block.squeeze_excitation import SEBlock
 
 
 class UNet(Model):

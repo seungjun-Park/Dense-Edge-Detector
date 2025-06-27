@@ -12,19 +12,18 @@ module:
         lpips_weight: 1.0
         l1_weight: 1.0
         ssim_weight: 1.0
-        content_weight: 0.4
+        content_weight: 0.5
 
     in_channels: 3
     embed_dim: 32
     out_channels: 1
-    hidden_dims: [ 64, 128, 256 ]
     num_blocks: 2
     drop_path: 0.1
-    activation: 'torch.nn.SiLU'
-    mode: 'nearest'
+    activation: 'torch.nn.GELU'
+    mode: 'bilinear'
     num_heads: 8
     use_checkpoint: False
-    scale_factors: [ 5, 2, 2, 2 ]
+    scale_factors: [ 2, 2, 2 ]
 
 data:
   target: datasets.util.DataModuleFromConfig
@@ -38,7 +37,7 @@ data:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/edge_detection/anime'
         train: True
-        size: [520, 520]
+        size: [512, 512]
         scale: [ 0.5, 1.0 ]
         color_space: 'rgb'
 
@@ -48,7 +47,7 @@ data:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/edge_detection/anime'
         train: False
-        size: [520, 520]
+        size: [512, 512]
         scale: [ 0.5, 1.0 ]
         color_space: 'rgb'
 
@@ -57,14 +56,14 @@ logger:
   params:
     save_dir: './logs'
     name: 'unet'
-    version: 'convnext/hd'
+    version: 'with_content'
 
 
 checkpoints:
   latest_checkpoints:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/convnext'
+      dirpath: './checkpoints/unet/with_content'
       filename: 'last'
       monitor: 'step'
       mode: 'max'
@@ -73,23 +72,14 @@ checkpoints:
   best_checkpoint:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/convnext/hd'
+      dirpath: './checkpoints/unet/with_content'
       filename: 'best'
       monitor: 'valid/total_loss'
       mode: 'min'
       save_top_k: 1
 
-  sample_checkpoints:
-    target: pytorch_lightning.callbacks.ModelCheckpoint
-    params:
-      dirpath: './checkpoints/unet/convnext/hd'
-      filename: 'train'
-      monitor: 'train/total_loss'
-      mode: 'max'
-      save_top_k: 1
-
 trainer:
   accelerator: 'gpu'
-  max_epochs: 300
+  max_epochs: 200
   accumulate_grad_batches: 5
-  precision: 'bf16'
+  # precision: 'bf16'

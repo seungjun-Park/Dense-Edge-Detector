@@ -22,8 +22,6 @@ class UNet(Model):
                  num_blocks: Union[int, List[int], Tuple[int]] = 2,
                  drop_path: float = 0.0,
                  activation: str = 'torch.nn.GELU',
-                 num_heads: int = 8,
-                 num_head_channels: int = None,
                  mode: str = 'nearest',
                  use_checkpoint: bool = True,
                  scale_factors: int | List[int] | Tuple[int] = 2,
@@ -82,13 +80,12 @@ class UNet(Model):
                 activation=activation,
                 drop_path=drop_path,
             ),
-            # FlashAttentionBlock(
-            #     in_channels=in_ch,
-            #     num_heads=num_heads,
-            #     num_head_channels=num_head_channels,
-            #     activation=activation,
-            #     drop_path=drop_path,
-            # ),
+            ResidualBlock(
+                in_channels=in_ch,
+                use_checkpoint=use_checkpoint,
+                activation=activation,
+                drop_path=drop_path,
+            ),
         )
 
         for i, sf in list(enumerate(scale_factors))[::-1]:

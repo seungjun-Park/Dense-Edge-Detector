@@ -12,7 +12,7 @@ module:
         lpips_weight: 1.0
         l1_weight: 1.0
         ssim_weight: 0.0
-        content_weight: 0.0
+        content_weight: 0.5
 
     in_channels: 3
     embed_dim: 32

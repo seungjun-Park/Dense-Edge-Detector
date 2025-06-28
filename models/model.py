@@ -23,8 +23,8 @@ class Model(pl.LightningModule, ABC):
                  log_interval: int = 100,
                  ckpt_path: str = None,
                  ignore_keys: Union[List[str], Tuple[str]] = (),
-                 add_noise_prob: float = 0.5,
-                 add_noise_ratio: float = 0.15,
+                 noise_prob: float = 0.5,
+                 max_noise_ratio: float = 0.5,
                  *args,
                  **ignored_kwargs,
                  ):
@@ -34,8 +34,8 @@ class Model(pl.LightningModule, ABC):
         self.weight_decay = weight_decay
         self.lr_decay_epoch = lr_decay_epoch
         self.log_interval = log_interval
-        self.add_noise_ratio = add_noise_ratio
-        self.add_noise_prob = add_noise_prob
+        self.max_noise_ratio = max_noise_ratio
+        self.noise_prob = noise_prob
 
         if loss_config is not None:
             self.loss: Loss = instantiate_from_config(loss_config).eval()
@@ -62,10 +62,10 @@ class Model(pl.LightningModule, ABC):
         pass
 
     def add_noise(self, inputs: torch.Tensor) -> torch.Tensor:
-        if random.random() < self.add_noise_prob:
+        if random.random() < self.noise_prob:
             noise = torch.randn(inputs.shape).to(inputs.device)
-            prob = min(self.add_noise_ratio, random.random())
-            inputs = inputs + prob * noise
+            # prob = min(self.add_noise_ratio, random.random())
+            inputs = inputs + self.max_noise_ratio * (self.current_epoch / self.trainer.max_epochs) * noise
 
         return inputs
 

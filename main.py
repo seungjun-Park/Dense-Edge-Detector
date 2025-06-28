@@ -3,6 +3,7 @@ import argparse
 import glob
 import math
 import os.path
+import torch.nn.functional as F
 
 import cv2
 import torch.cuda
@@ -16,6 +17,7 @@ import time
 
 from utils import instantiate_from_config
 from models.model import Model
+from models.unet import UNet
 
 
 def get_parser(**parser_kwargs):
@@ -82,66 +84,5 @@ def main():
     trainer.fit(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
     # trainer.test(model=model)
 
-
-def test():
-    parsers = get_parser()
-
-    opt, unknown = parsers.parse_known_args()
-
-    # init and save configs
-    configs = [OmegaConf.load(cfg) for cfg in opt.base]
-    cli = OmegaConf.from_dotlist(unknown)
-    config = OmegaConf.merge(*configs, cli)
-
-    device = torch.device('cuda')
-
-    model: Model = instantiate_from_config(config.module).to(device).eval()
-    state_dict = torch.load('./checkpoints/unet/convnext/hd/best.ckpt', map_location="cpu")["state_dict"]
-    model.load_state_dict(state_dict, strict=False)
-
-    data_path = 'D:/datasets/edge_detection/yae_miko_genshin/test/images'
-    # data_path = '/local_datasets/wakamo/val/images'
-    file_names = glob.glob(f'{data_path}/*.*')
-
-    mean_time = []
-    mean_h = []
-    mean_w = []
-
-    with torch.no_grad():
-        for name in tqdm.tqdm(file_names):
-            img = cv2.imread(f'{name}', cv2.IMREAD_COLOR)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            img = torchvision.transforms.transforms.ToTensor()(img).to(device)
-            # img = torchvision.transforms.transforms.Resize(720)(img)
-            c, h, w = img.shape
-            if w % 40 != 0:
-                w = math.ceil(w / 40) * 40
-                # mean_w.append(w)
-            if h % 40 != 0:
-                h = math.ceil(h / 40) * 40
-                # mean_h.append(h)
-            img = torchvision.transforms.transforms.Resize([h, w])(img)
-            img = img.unsqueeze(0)
-            with torch.autocast(dtype=torch.float, device_type='cuda'):
-                #start = time.time()
-                img = model(img)
-                #end = time.time()
-                #mean_time.append(end - start)
-            img = img.float().detach().cpu()
-            if len(img.shape) == 4:
-                img = img[0]
-            img = torchvision.transforms.ToPILImage()(img)
-            p1, p2 = name.rsplit('images', 1)
-            if not os.path.isdir(f'{p1}/edges'):
-                os.mkdir(f'{p1}/edges')
-            img.save(f'{p1}/edges/{p2}.png', 'png')
-            # p1, p2 = name.rsplit('imgs', 1)
-            # img.save(f'{p1}/edge_maps/{p2}', 'png')
-
-    # print(f'avg time: {sum(mean_time) / len(mean_time)}')
-    # print(f'avg h: {sum(mean_h) / len(mean_h)}')
-    # print(f'avg w: {sum(mean_w) / len(mean_w)}')
-
 if __name__ == '__main__':
     main()
-    # test()

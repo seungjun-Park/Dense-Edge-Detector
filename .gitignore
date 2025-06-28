@@ -206,3 +206,4 @@ logs/
 
 #External library
 environment.sh
+*.sh

@@ -19,7 +19,7 @@ IMG_FORMATS = ['png', 'jpg']
 STR_FORMATS = ['txt', 'csv']
 
 
-class ArknightsDataset(Dataset):
+class AnimeDataset(Dataset):
     def __init__(self,
                  root,
                  train=True,
@@ -97,7 +97,7 @@ class ArknightsDataset(Dataset):
             img = self.horizontal_flip(img)
             edge = self.horizontal_flip(edge)
 
-        return img, edge
+        return img, edge, torch.tensor(1.0)
 
     def __len__(self):
         return len(self.img_names)

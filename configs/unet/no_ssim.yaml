@@ -31,7 +31,7 @@ data:
     batch_size: 4
     wrap: True
     train:
-      target: datasets.arknights.ArknightsDataset
+      target: datasets.anime.AnimeDataset
       params:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/edge_detection/anime'
@@ -41,7 +41,7 @@ data:
         color_space: 'rgb'
 
     validation:
-      target: datasets.arknights.ArknightsDataset
+      target: datasets.anime.AnimeDataset
       params:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/edge_detection/anime'

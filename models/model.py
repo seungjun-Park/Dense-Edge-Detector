@@ -69,8 +69,8 @@ class Model(pl.LightningModule, ABC):
 
         return inputs
 
-    def step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
-        inputs, targets = batch
+    def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
+        inputs, targets, _ = batch
         # noised_inputs = self.add_noise(inputs)
         outputs = self(inputs)
 

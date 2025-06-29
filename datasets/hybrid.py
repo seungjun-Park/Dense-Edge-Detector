@@ -13,15 +13,12 @@ import torchvision.transforms.functional as tf
 from typing import Union, List, Tuple
 
 from utils import instantiate_from_config, to_2tuple
-from datasets.util import nearest_multiple
-
-IMG_FORMATS = ['png', 'jpg']
-STR_FORMATS = ['txt', 'csv']
 
 
-class BIPEDDataset(Dataset):
+class HybridDataset(Dataset):
     def __init__(self,
-                 root,
+                 anime_root,
+                 biped_root,
                  train=True,
                  size: int | List[int] | Tuple[int] = 224,
                  scale: List[float] | Tuple[float] = (0.08, 1.0),
@@ -58,31 +55,41 @@ class BIPEDDataset(Dataset):
         self.ratio = list(to_2tuple(ratio))
 
         if train:
-            root = os.path.join(root, 'train')
+            anime_root = os.path.join(anime_root, 'train')
+            biped_root = os.path.join(biped_root, 'train')
         else:
-            root = os.path.join(root, 'valid')
+            anime_root = os.path.join(anime_root, 'val')
+            biped_root = os.path.join(biped_root, 'valid')
 
-        self.edge_names = glob.glob(f'{root}/edges/*.*')
-        self.img_names = glob.glob(f'{root}/images/*.*')
+
+        self.img_names = [*glob.glob(f'{anime_root}/*/images/*.*'), *glob.glob(f'{biped_root}/images/*.*')]
+        self.edge_names = [*glob.glob(f'{anime_root}/*/edges/*.*'), *glob.glob(f'{biped_root}/edges/*.*')]
 
         self.color_jitter = transforms.ColorJitter(brightness=0, contrast=0.5, saturation=0.5, hue=0.5)
         self.invert = transforms.RandomInvert(p=1.0)
         self.horizontal_flip = transforms.RandomHorizontalFlip(p=1.0)
 
-        assert len(self.edge_names) == len(self.img_names)
+        self.biped_idx = 0
 
-    def __getitem__(self, index):
+        self.anime_len = len(self.img_names[0]) - 1
+
+        assert len(self.img_names) == len(self.edge_names)
+
+    def get_img_edge_granularity(self, index: int):
         edge_name = self.edge_names[index]
         img_name = self.img_names[index]
 
-        assert edge_name.rsplit('/', 1)[1] == img_name.rsplit('/', 1)[1]
+        if index > self.anime_len:
+            granularity = torch.tensor(0.0)
+        else:
+            granularity = torch.tensor(1.0)
 
         img = cv2.imread(f'{img_name}', cv2.IMREAD_COLOR)
         img = cv2.cvtColor(img, self.color_space)
         edge = cv2.imread(f'{edge_name}', cv2.IMREAD_GRAYSCALE)
 
         img = self.to_tensor(img)
-        edge = 1. - self.to_tensor(edge)
+        edge = self.to_tensor(edge)
 
         i, j, h, w = transforms.RandomResizedCrop.get_params(img, scale=self.scale, ratio=self.ratio)
 
@@ -99,7 +106,10 @@ class BIPEDDataset(Dataset):
             img = self.horizontal_flip(img)
             edge = self.horizontal_flip(edge)
 
-        return img, edge, torch.tensor(0.0)
+        return img, edge, granularity
+
+    def __getitem__(self, index):
+        return self.get_img_edge_granularity(index)
 
     def __len__(self):
-        return len(self.img_names)
+        return len(self.img_names[0])

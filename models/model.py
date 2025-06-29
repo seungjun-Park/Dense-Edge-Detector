@@ -23,8 +23,8 @@ class Model(pl.LightningModule, ABC):
                  log_interval: int = 100,
                  ckpt_path: str = None,
                  ignore_keys: Union[List[str], Tuple[str]] = (),
-                 noise_prob: float = 0.5,
-                 max_noise_ratio: float = 0.5,
+                 noise_prob: float = 0.,
+                 max_noise_ratio: float = 0.,
                  *args,
                  **ignored_kwargs,
                  ):
@@ -71,13 +71,13 @@ class Model(pl.LightningModule, ABC):
 
     def step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
         inputs, targets = batch
-        noised_inputs = self.add_noise(inputs)
-        outputs = self(noised_inputs)
+        # noised_inputs = self.add_noise(inputs)
+        outputs = self(inputs)
 
         loss, loss_log = self.loss(inputs, targets, outputs, split='train' if self.training else 'valid')
 
         if self.global_step % self.log_interval == 0:
-            self.log_images(noised_inputs, targets, outputs)
+            self.log_images(inputs, targets, outputs)
 
         self.log_dict(loss_log, prog_bar=True)
 

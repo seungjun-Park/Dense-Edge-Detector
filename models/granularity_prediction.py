@@ -48,7 +48,7 @@ class GranularityPredictor(Model):
         images, edges, granularity = batch
         outputs = self(torch.cat([images, edges], dim=1))
 
-        loss, loss_log = self.loss(granularity, outputs, split='train' if self.training else 'valid')
+        loss, loss_log = self.loss(outputs, granularity, split='train' if self.training else 'valid')
 
         self.log_dict(loss_log, prog_bar=True)
 

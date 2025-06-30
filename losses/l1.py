@@ -1,14 +1,12 @@
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
-from piq import SSIMLoss
-
 from typing import Tuple, Dict
-from taming.modules.losses import LPIPS
-from losses.loss import Loss
 
 
-class L1(Loss):
+
+class L1(nn.Module):
     def __init__(self,
                  l1_weight: float = 1.0,
                  *args,
@@ -18,7 +16,7 @@ class L1(Loss):
         super().__init__(*args, **kwargs)
         self.l1_weight = l1_weight
 
-    def forward(self, inputs: torch.Tensor, targets: torch.Tensor, outputs: torch.Tensor, split: str) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    def forward(self, outputs: torch.Tensor, targets: torch.Tensor, split: str) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         l1_loss = F.l1_loss(outputs, targets, reduction='mean')
 
         loss = self.l1_weight * l1_loss

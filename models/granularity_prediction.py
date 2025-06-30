@@ -20,18 +20,16 @@ class GranularityPredictor(Model):
         self.features = model.features
         self.features[0] = nn.Conv2d(4, 64, kernel_size=3, stride=1, padding=1)
 
-        self.avgpool = model.avgpool
+        self.avgpool = nn.AdaptiveAvgPool2d((7, 7))
         self.classifier = nn.Sequential(
             nn.Dropout(),
-            nn.Linear(512 * 7 * 7, 512),
-            nn.LayerNorm(512),
+            nn.Linear(512 * 7 * 7, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(512, 128),
-            nn.LayerNorm(128),
+            nn.Linear(1024, 256),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(128, 1)
+            nn.Linear(256, 1)
         )
 
         self.save_hyperparameters(ignore='loss_config')
@@ -39,9 +37,8 @@ class GranularityPredictor(Model):
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         logits = self.features(inputs)
         logits = self.avgpool(logits)
-        logits = logits.reshape(logits.shape[0], 512 * 7 * 7)
+        logits = torch.flatten(logits, 1)
         logits = self.classifier(logits)
-        logits = torch.sigmoid(logits)
         return F.sigmoid(logits)
 
     def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
@@ -52,7 +49,7 @@ class GranularityPredictor(Model):
 
         self.log_dict(loss_log, prog_bar=True)
 
-        return
+        return loss
 
 
 

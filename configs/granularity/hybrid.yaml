@@ -7,7 +7,7 @@ module:
     loss_config:
       target: losses.l1.L1
       params:
-        lpips_weight: 1.0
+        l1_weight: 1.0
 
 data:
   target: datasets.util.DataModuleFromConfig

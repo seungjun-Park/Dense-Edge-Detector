@@ -36,7 +36,7 @@ class GranularityPredictor(Model):
 
         self.save_hyperparameters(ignore='loss_config')
 
-    def forward(self, inputs: torch.Tensor, granularity: torch.Tensor) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         logits = self.features(inputs)
         logits = self.avgpool(logits)
         logits = logits.reshape(logits.shpae[0], 512 * 7 * 7)

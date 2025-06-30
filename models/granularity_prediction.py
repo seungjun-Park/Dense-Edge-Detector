@@ -63,8 +63,9 @@ class GranularityPredictor(Model):
             nn.Conv2d(in_ch // 4, 1, kernel_size=1),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(8 * 8, 1)
         )
+
+        self.out = nn.Linear(8 * 8, 1)
 
         self.save_hyperparameters(ignore='loss_config')
 
@@ -72,6 +73,7 @@ class GranularityPredictor(Model):
         logits = self.encoder(inputs)
         logits = self.classifier(logits)
         logits = torch.flatten(logits, 1)
+        logits = self.out(logits)
         return F.sigmoid(logits)
 
     def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:

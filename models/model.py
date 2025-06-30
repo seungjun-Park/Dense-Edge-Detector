@@ -23,8 +23,6 @@ class Model(pl.LightningModule, ABC):
                  log_interval: int = 100,
                  ckpt_path: str = None,
                  ignore_keys: Union[List[str], Tuple[str]] = (),
-                 noise_prob: float = 0.,
-                 max_noise_ratio: float = 0.,
                  *args,
                  **ignored_kwargs,
                  ):
@@ -34,8 +32,6 @@ class Model(pl.LightningModule, ABC):
         self.weight_decay = weight_decay
         self.lr_decay_epoch = lr_decay_epoch
         self.log_interval = log_interval
-        self.max_noise_ratio = max_noise_ratio
-        self.noise_prob = noise_prob
 
         if loss_config is not None:
             self.loss: Loss = instantiate_from_config(loss_config).eval()
@@ -56,32 +52,9 @@ class Model(pl.LightningModule, ABC):
         self.load_state_dict(state_dict, strict=False)
         print(f"Restored from {path}")
 
-
     @abstractmethod
-    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        pass
-
-    def add_noise(self, inputs: torch.Tensor) -> torch.Tensor:
-        if random.random() < self.noise_prob:
-            noise = torch.randn(inputs.shape).to(inputs.device)
-            # prob = min(self.add_noise_ratio, random.random())
-            inputs = inputs + self.max_noise_ratio * (self.current_epoch / self.trainer.max_epochs) * noise
-
-        return inputs
-
     def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
-        inputs, targets, _ = batch
-        # noised_inputs = self.add_noise(inputs)
-        outputs = self(inputs)
-
-        loss, loss_log = self.loss(inputs, targets, outputs, split='train' if self.training else 'valid')
-
-        if self.global_step % self.log_interval == 0:
-            self.log_images(inputs, targets, outputs)
-
-        self.log_dict(loss_log, prog_bar=True)
-
-        return loss
+        pass
 
     def training_step(self, batch, batch_idx):
         return self.step(batch, batch_idx)

@@ -62,14 +62,12 @@ class HybridDataset(Dataset):
             biped_root = os.path.join(biped_root, 'valid')
 
 
-        self.img_names = [*glob.glob(f'{anime_root}/*/images/*.*'), *glob.glob(f'{biped_root}/images/*.*')]
-        self.edge_names = [*glob.glob(f'{anime_root}/*/edges/*.*'), *glob.glob(f'{biped_root}/edges/*.*')]
+        self.img_names = [*glob.glob(f'{anime_root}/*/images/*.*'), *glob.glob(f'{biped_root}/*/images/*.*')]
+        self.edge_names = [*glob.glob(f'{anime_root}/*/edges/*.*'), *glob.glob(f'{biped_root}/*/edges/*.*')]
 
-        self.color_jitter = transforms.ColorJitter(brightness=0, contrast=0.5, saturation=0.5, hue=0.5)
-        self.invert = transforms.RandomInvert(p=1.0)
-        self.horizontal_flip = transforms.RandomHorizontalFlip(p=1.0)
-
-        self.biped_idx = 0
+        # self.color_jitter = transforms.ColorJitter(brightness=0, contrast=0.5, saturation=0.5, hue=0.5)
+        # self.invert = transforms.RandomInvert(p=1.0)
+        # self.horizontal_flip = transforms.RandomHorizontalFlip(p=1.0)
 
         self.anime_len = len(self.img_names[0]) - 1
 
@@ -79,10 +77,8 @@ class HybridDataset(Dataset):
         edge_name = self.edge_names[index]
         img_name = self.img_names[index]
 
-        if index > self.anime_len:
-            granularity = torch.tensor(0.0)
-        else:
-            granularity = torch.tensor(1.0)
+        granularity_path = img_name.rsplit('/images', 1)[0]
+        granularity = torch.tensor(np.load(f'{granularity_path}/granularity.npy'))
 
         img = cv2.imread(f'{img_name}', cv2.IMREAD_COLOR)
         img = cv2.cvtColor(img, self.color_space)

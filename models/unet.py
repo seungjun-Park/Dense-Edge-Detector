@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Optional
 from collections.abc import Iterable
 
 
@@ -124,7 +124,7 @@ class UNet(Model):
 
         self.save_hyperparameters()
 
-    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor, granularity: torch.Tensor) -> torch.Tensor:
         outputs = inputs
 
         skips = []
@@ -141,3 +141,16 @@ class UNet(Model):
             outputs = block(outputs)
 
         return self.out(outputs)
+
+    def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
+        inputs, targets, _ = batch
+        outputs = self(inputs)
+
+        loss, loss_log = self.loss(inputs, targets, outputs, split='train' if self.training else 'valid')
+
+        if self.global_step % self.log_interval == 0:
+            self.log_images(inputs, targets, outputs)
+
+        self.log_dict(loss_log, prog_bar=True)
+
+        return loss

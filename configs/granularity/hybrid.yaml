@@ -9,7 +9,7 @@ module:
       params:
         l1_weight: 1.0
 
-    embed_dim: 16
+    embed_dim: 32
     num_blocks: 2
     drop_path: 0.5
     activation: 'torch.nn.GELU'

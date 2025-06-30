@@ -11,7 +11,7 @@ module:
 
     embed_dim: 32
     num_blocks: 2
-    drop_path: 0.5
+    drop_path: 0.2
     activation: 'torch.nn.GELU'
     use_checkpoint: True
     scale_factors: [ 2, 2, 2 ]

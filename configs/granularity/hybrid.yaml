@@ -9,6 +9,13 @@ module:
       params:
         l1_weight: 1.0
 
+    embed_dim: 16
+    num_blocks: 2
+    drop_path: 0.5
+    activation: 'torch.nn.GELU'
+    use_checkpoint: True
+    scale_factors: [ 2, 2, 2 ]
+
 data:
   target: datasets.util.DataModuleFromConfig
   params:
@@ -64,6 +71,6 @@ checkpoints:
 
 trainer:
   accelerator: 'gpu'
-  max_epochs: 200
+  max_epochs: 20
   accumulate_grad_batches: 1
   # precision: 'bf16'

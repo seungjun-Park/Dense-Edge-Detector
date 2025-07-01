@@ -82,18 +82,12 @@ class HybridDataset(Dataset):
 
         img = self.to_tensor(img)
 
-        if random.random() < 0.025:
-            c, h, w = img.shape
-            edge = torch.full([1, h, w], 1.0)
+        edge = cv2.imread(f'{edge_name}', cv2.IMREAD_GRAYSCALE)
 
-            granularity = torch.tensor([0.0])
-        else:
-            edge = cv2.imread(f'{edge_name}', cv2.IMREAD_GRAYSCALE)
+        granularity_path = img_name.rsplit('/images', 1)[0]
+        granularity = torch.tensor(np.load(f'{granularity_path}/granularity.npy'))
 
-            granularity_path = img_name.rsplit('/images', 1)[0]
-            granularity = torch.tensor(np.load(f'{granularity_path}/granularity.npy'))
-
-            edge = self.to_tensor(edge)
+        edge = self.to_tensor(edge)
 
         i, j, h, w = transforms.RandomResizedCrop.get_params(img, scale=self.scale, ratio=self.ratio)
 

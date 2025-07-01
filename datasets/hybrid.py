@@ -82,7 +82,7 @@ class HybridDataset(Dataset):
 
         img = self.to_tensor(img)
 
-        if random.random() < 0.1:
+        if random.random() < 0.025:
             c, h, w = img.shape
             edge = torch.full([1, h, w], 1.0)
 
@@ -100,20 +100,10 @@ class HybridDataset(Dataset):
         img = tf.resized_crop(img, i, j, h, w, size=self.size, antialias=True)
         edge = tf.resized_crop(edge, i, j, h, w, size=self.size, antialias=True)
 
-        # if random.random() < 0.5:
-        #     if random.random() < 0.5:
-        #         img = self.color_jitter(img)
-        #     else:
-        #         img = self.invert(img)
-        #
-        # if random.random() < 0.5:
-        #     img = self.horizontal_flip(img)
-        #     edge = self.horizontal_flip(edge)
-
         return img, edge, granularity
 
     def __getitem__(self, index):
         return self.get_img_edge_granularity(index)
 
     def __len__(self):
-        return len(self.img_names)
+        return len(self.img_names) + 10

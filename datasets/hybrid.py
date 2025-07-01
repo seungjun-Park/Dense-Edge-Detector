@@ -106,4 +106,4 @@ class HybridDataset(Dataset):
         return self.get_img_edge_granularity(index)
 
     def __len__(self):
-        return len(self.img_names) + 10
+        return len(self.img_names)

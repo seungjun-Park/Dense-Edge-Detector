@@ -18,7 +18,7 @@ class GranularityPredictor(Model):
         super().__init__(*args, **kwargs)
 
         # 导入VGG16模型
-        model = models.vgg16_bn(pretrained=True)
+        model = models.vgg16(pretrained=True)
         # 加载features部分
         self.features = model.features
         self.features[0] = nn.Conv2d(4, 64, kernel_size=3, stride=1, padding=1)
@@ -29,11 +29,11 @@ class GranularityPredictor(Model):
         self.classifier = nn.Sequential(
             nn.Dropout(),
             nn.Linear(512 * 7 * 7, 1024),
-            nn.BatchNorm1d(1024),
+            # nn.BatchNorm1d(1024),
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(1024, 256),
-            nn.BatchNorm1d(256),
+            # nn.BatchNorm1d(256),
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(256, 1)
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     import torchvision
     from torchvision.transforms import InterpolationMode
 
-    model = GranularityPredictor.load_from_checkpoint('../checkpoints/granularity_prediction/hybrid/best.ckpt').eval().cuda()
+    model = GranularityPredictor.load_from_checkpoint('../checkpoints/granularity_prediction/hybrid/last.ckpt').eval().cuda()
 
     data_path = 'D:/datasets/anime/train/amiya/images'
     edge_path = 'D:/datasets/anime/train/amiya/edges'

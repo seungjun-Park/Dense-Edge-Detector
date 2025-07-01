@@ -69,8 +69,6 @@ class HybridDataset(Dataset):
         # self.invert = transforms.RandomInvert(p=1.0)
         # self.horizontal_flip = transforms.RandomHorizontalFlip(p=1.0)
 
-        self.anime_len = len(self.img_names[0]) - 1
-
         assert len(self.img_names) == len(self.edge_names)
 
     def get_img_edge_granularity(self, index: int):
@@ -82,12 +80,18 @@ class HybridDataset(Dataset):
 
         img = self.to_tensor(img)
 
-        edge = cv2.imread(f'{edge_name}', cv2.IMREAD_GRAYSCALE)
+        if random.random() < 0.05:
+            c, h, w = img.shape
+            edge = torch.full([1, h, w], 1.0)
 
-        granularity_path = img_name.rsplit('/images', 1)[0]
-        granularity = torch.tensor(np.load(f'{granularity_path}/granularity.npy'))
+            granularity = torch.tensor([0.0])
+        else:
+            edge = cv2.imread(f'{edge_name}', cv2.IMREAD_GRAYSCALE)
 
-        edge = self.to_tensor(edge)
+            granularity_path = img_name.rsplit('/images', 1)[0]
+            granularity = torch.tensor(np.load(f'{granularity_path}/granularity.npy'))
+
+            edge = self.to_tensor(edge)
 
         i, j, h, w = transforms.RandomResizedCrop.get_params(img, scale=self.scale, ratio=self.ratio)
 

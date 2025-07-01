@@ -60,14 +60,14 @@ checkpoints:
       mode: 'max'
       save_top_k: 1
 
-  best_checkpoint:
-    target: pytorch_lightning.callbacks.ModelCheckpoint
-    params:
-      dirpath: './checkpoints/granularity_prediction/hybrid'
-      filename: 'best'
-      monitor: 'valid/total_loss'
-      mode: 'min'
-      save_top_k: 1
+#  best_checkpoint:
+#    target: pytorch_lightning.callbacks.ModelCheckpoint
+#    params:
+#      dirpath: './checkpoints/granularity_prediction/hybrid'
+#      filename: 'best'
+#      monitor: 'valid/total_loss'
+#      mode: 'min'
+#      save_top_k: 1
 
 trainer:
   accelerator: 'gpu'

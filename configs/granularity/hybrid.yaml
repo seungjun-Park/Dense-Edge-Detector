@@ -9,13 +9,6 @@ module:
       params:
         l1_weight: 1.0
 
-    embed_dim: 32
-    num_blocks: 2
-    drop_path: 0.1
-    activation: 'torch.nn.GELU'
-    use_checkpoint: True
-    scale_factors: [ 2, 2, 2 ]
-
 data:
   target: datasets.util.DataModuleFromConfig
   params:
@@ -23,20 +16,24 @@ data:
     batch_size: 5
     wrap: True
     train:
-      target: datasets.hybrid.HybridDataset
+      target: datasets.hybrid_for_prediction.HybridExtendDataset
       params:
         anime_root: '/local_datasets/anime'
         biped_root: '/local_datasets/BIPED'
+#        anime_root: 'D:/datasets/anime'
+#        biped_root: 'D:/datasets/BIPED'
         train: True
         size: [512, 512]
         scale: [ 0.5, 1.0 ]
         color_space: 'rgb'
 
     validation:
-      target: datasets.hybrid.HybridDataset
+      target: datasets.hybrid_for_prediction.HybridExtendDataset
       params:
-        anime_root: '/local_datasets/anime'
-        biped_root: '/local_datasets/BIPED'
+         anime_root: '/local_datasets/anime'
+         biped_root: '/local_datasets/BIPED'
+#        anime_root: 'D:/datasets/anime'
+#        biped_root: 'D:/datasets/BIPED'
         train: False
         size: [512, 512]
         scale: [ 0.5, 1.0 ]
@@ -60,14 +57,14 @@ checkpoints:
       mode: 'max'
       save_top_k: 1
 
-#  best_checkpoint:
-#    target: pytorch_lightning.callbacks.ModelCheckpoint
-#    params:
-#      dirpath: './checkpoints/granularity_prediction/hybrid'
-#      filename: 'best'
-#      monitor: 'valid/total_loss'
-#      mode: 'min'
-#      save_top_k: 1
+  best_checkpoint:
+    target: pytorch_lightning.callbacks.ModelCheckpoint
+    params:
+      dirpath: './checkpoints/granularity_prediction/hybrid'
+      filename: 'best'
+      monitor: 'valid/total_loss'
+      mode: 'min'
+      save_top_k: 1
 
 trainer:
   accelerator: 'gpu'

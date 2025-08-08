@@ -64,6 +64,7 @@ class BIPEDDataset(Dataset):
 
         self.edge_names = glob.glob(f'{root}/edges/*.*')
         self.img_names = glob.glob(f'{root}/images/*.*')
+        self.granularity = glob.glob(f'{root}/granularity/*.*')
 
         self.color_jitter = transforms.ColorJitter(brightness=0, contrast=0.5, saturation=0.5, hue=0.5)
         self.invert = transforms.RandomInvert(p=1.0)

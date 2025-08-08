@@ -64,6 +64,7 @@ class AnimeDataset(Dataset):
 
         self.edge_names = glob.glob(f'{root}/*/edges/*.*')
         self.img_names = glob.glob(f'{root}/*/images/*.*')
+        self.granularity = glob.glob(f'{root}/*/granularity/*.*')
 
         self.color_jitter = transforms.ColorJitter(brightness=0, contrast=0.5, saturation=0.5, hue=0.5)
         self.invert = transforms.RandomInvert(p=1.0)
@@ -74,6 +75,7 @@ class AnimeDataset(Dataset):
     def __getitem__(self, index):
         edge_name = self.edge_names[index]
         img_name = self.img_names[index]
+        granularity_name = self.granularity[index]
 
         img = cv2.imread(f'{img_name}', cv2.IMREAD_COLOR)
         img = cv2.cvtColor(img, self.color_space)
@@ -97,7 +99,9 @@ class AnimeDataset(Dataset):
             img = self.horizontal_flip(img)
             edge = self.horizontal_flip(edge)
 
-        return img, edge, torch.tensor(1.0)
+        granularity = torch.from_numpy(np.load(granularity_name))
+
+        return img, edge, granularity
 
     def __len__(self):
         return len(self.img_names)

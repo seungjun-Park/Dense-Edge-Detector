@@ -15,6 +15,7 @@ class ResidualBlock(Block):
                  activation: str = 'torch.nn.GELU',
                  use_conv: bool = True,
                  drop_path: float = 0.,
+                 num_groups: int = 1,
                  *args,
                  **kwargs
                  ):
@@ -22,14 +23,25 @@ class ResidualBlock(Block):
 
         make_activation = load_module(activation)
 
-        self.block = nn.Sequential(
+        self.in_block = nn.Sequential(
+            nn.GroupNorm(num_groups, self.in_channels),
+            make_activation(),
             nn.Conv2d(self.in_channels, self.out_channels, kernel_size=3, padding=1),
-            LayerNorm(self.out_channels, data_format='channels_first'),
+        )
+
+        self.out_block = nn.Sequential(
+            nn.GroupNorm(num_groups, self.out_channels),
             make_activation(),
             zero_module(
                 nn.Conv2d(self.out_channels, self.out_channels, kernel_size=3, padding=1),
             ),
-            LayerNorm(self.out_channels, data_format='channels_first'),
+        )
+
+        self.embed_granularity = nn.Sequential(
+            nn.Linear(
+                1,
+                self.out_channels * 2,
+            ),
             make_activation(),
         )
 
@@ -53,5 +65,14 @@ class ResidualBlock(Block):
 
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
-    def _forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.drop_path(self.block(x)) + self.shortcut(x)
+    def _forward(self, x: torch.Tensor, granularity: torch.Tensor = None) -> torch.Tensor:
+        h = self.in_block(x)
+        granularity = self.embed_granularity(granularity).type(h.dtype)
+        while len(granularity.shape) < len(h.shape):
+            granularity = granularity[..., None]
+        out_norm, out_rest = self.out_block[0], self.out_block[1:]
+        scale, shift = granularity.chunk(2, dim=1)
+        h = out_norm(h) * (1 + scale) + shift
+        h = out_rest(h)
+
+        return self.drop_path(h) + self.shortcut(x)

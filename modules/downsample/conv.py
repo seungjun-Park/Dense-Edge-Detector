@@ -17,7 +17,6 @@ class ConvDownSample(DownSample):
         self.scale_factor = int(self.scale_factor)
 
         self.down_layer = nn.Sequential(
-            LayerNorm(self.in_channels),
             nn.Conv2d(
                 self.in_channels,
                 int(self.in_channels * self.scale_factor),
@@ -26,6 +25,6 @@ class ConvDownSample(DownSample):
             ),
         )
 
-    def _forward(self, x: torch.Tensor) -> torch.Tensor:
+    def _forward(self, x: torch.Tensor, granularity: torch.Tensor = None) -> torch.Tensor:
         return self.down_layer(x)
 

@@ -15,5 +15,5 @@ class DownSample(Block):
         self.scale_factor = scale_factor
 
     @abstractmethod
-    def _forward(self, x: torch.Tensor) -> torch.Tensor:
+    def _forward(self, x: torch.Tensor, granularity: torch.Tensor = None) -> torch.Tensor:
         pass

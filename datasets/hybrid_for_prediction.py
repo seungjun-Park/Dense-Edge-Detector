@@ -15,7 +15,7 @@ from typing import Union, List, Tuple
 from utils import instantiate_from_config, to_2tuple
 
 
-class HybridDataset(Dataset):
+class HybridExtendDataset(Dataset):
     def __init__(self,
                  anime_root,
                  biped_root,
@@ -69,27 +69,47 @@ class HybridDataset(Dataset):
         # self.invert = transforms.RandomInvert(p=1.0)
         # self.horizontal_flip = transforms.RandomHorizontalFlip(p=1.0)
 
-        assert len(self.img_names) == len(self.edge_names)
+        assert len(self.img_names) == len(self.edge_names) and len(self.granularity) == len(self.edge_names)
+
+        self.real_len = len(self.img_names)
+        self.fake_len = self.real_len // 10
 
     def get_img_edge_granularity(self, index: int):
-        edge_name = self.edge_names[index]
-        img_name = self.img_names[index]
-        granularity_name = self.granularity[index]
+        if index < self.real_len:
+            edge_name = self.edge_names[index]
+            img_name = self.img_names[index]
+            granularity_name = self.granularity[index]
 
-        img = cv2.imread(f'{img_name}', cv2.IMREAD_COLOR)
-        img = cv2.cvtColor(img, self.color_space)
-        edge = cv2.imread(f'{edge_name}', cv2.IMREAD_GRAYSCALE)
+            img = cv2.imread(f'{img_name}', cv2.IMREAD_COLOR)
+            img = cv2.cvtColor(img, self.color_space)
+            edge = cv2.imread(f'{edge_name}', cv2.IMREAD_GRAYSCALE)
 
-        img = self.to_tensor(img)
+            img = self.to_tensor(img)
 
-        edge = self.to_tensor(edge)
+            edge = self.to_tensor(edge)
 
-        i, j, h, w = transforms.RandomResizedCrop.get_params(img, scale=self.scale, ratio=self.ratio)
+            i, j, h, w = transforms.RandomResizedCrop.get_params(img, scale=self.scale, ratio=self.ratio)
 
-        img = tf.resized_crop(img, i, j, h, w, size=self.size, antialias=True)
-        edge = tf.resized_crop(edge, i, j, h, w, size=self.size, antialias=True)
+            img = tf.resized_crop(img, i, j, h, w, size=self.size, antialias=True)
+            edge = tf.resized_crop(edge, i, j, h, w, size=self.size, antialias=True)
 
-        granularity = torch.from_numpy(np.load(granularity_name))
+            granularity = torch.from_numpy(np.load(granularity_name))
+
+        else:
+            index = random.randint(0, self.real_len)
+            img_name = self.img_names[index]
+
+            img = cv2.imread(f'{img_name}', cv2.IMREAD_COLOR)
+            img = cv2.cvtColor(img, self.color_space)
+            img = self.to_tensor(img)
+
+            i, j, h, w = transforms.RandomResizedCrop.get_params(img, scale=self.scale, ratio=self.ratio)
+
+            img = tf.resized_crop(img, i, j, h, w, size=self.size, antialias=True)
+
+            edge = torch.ones_like(img)
+
+            granularity = torch.tensor(0.0)
 
         return img, edge, granularity
 
@@ -97,4 +117,4 @@ class HybridDataset(Dataset):
         return self.get_img_edge_granularity(index)
 
     def __len__(self):
-        return len(self.img_names)
+        return self.real_len + self.fake_len

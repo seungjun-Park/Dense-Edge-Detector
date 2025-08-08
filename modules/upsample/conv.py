@@ -20,7 +20,6 @@ class ConvUpSample(UpSample):
         self.mode = mode
 
         self.up_layer = nn.Sequential(
-            LayerNorm(self.in_channels),
             nn.Conv2d(
                 self.in_channels,
                 self.in_channels // self.scale_factor,
@@ -29,7 +28,7 @@ class ConvUpSample(UpSample):
             )
         )
 
-    def _forward(self, x: torch.Tensor):
+    def _forward(self, x: torch.Tensor, granularity: torch.Tensor = None) -> torch.Tensor:
         x = F.interpolate(x, scale_factor=self.scale_factor, mode=self.mode)
 
         return self.up_layer(x)

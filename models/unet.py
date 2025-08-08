@@ -26,6 +26,7 @@ class UNet(Model):
                  mode: str = 'nearest',
                  use_checkpoint: bool = True,
                  scale_factors: int | List[int] | Tuple[int] = 2,
+                 num_groups: int = 1,
                  *args,
                  **kwargs,
                  ):
@@ -44,7 +45,6 @@ class UNet(Model):
                     kernel_size=3,
                     padding=1,
                 ),
-                LayerNorm(embed_dim)
             )
         )
 
@@ -60,6 +60,7 @@ class UNet(Model):
                         use_checkpoint=use_checkpoint,
                         activation=activation,
                         drop_path=drop_path,
+                        num_groups=num_groups,
                     )
                 )
                 skip_dims.append(in_ch)
@@ -80,12 +81,14 @@ class UNet(Model):
                 use_checkpoint=use_checkpoint,
                 activation=activation,
                 drop_path=drop_path,
+                num_groups=num_groups,
             ),
             ResidualBlock(
                 in_channels=in_ch,
                 use_checkpoint=use_checkpoint,
                 activation=activation,
                 drop_path=drop_path,
+                num_groups=num_groups,
             ),
         )
 
@@ -109,10 +112,15 @@ class UNet(Model):
                         use_checkpoint=use_checkpoint,
                         activation=activation,
                         drop_path=drop_path,
+                        num_groups=num_groups
                     )
                 )
 
+        make_activation = load_module(activation)
+
         self.out = nn.Sequential(
+            nn.GroupNorm(num_groups, in_ch),
+            make_activation(),
             nn.Conv2d(
                 in_ch,
                 out_channels,
@@ -122,7 +130,7 @@ class UNet(Model):
             nn.Sigmoid(),
         )
 
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore='loss_config')
 
     def forward(self, inputs: torch.Tensor, granularity: torch.Tensor) -> torch.Tensor:
         outputs = inputs

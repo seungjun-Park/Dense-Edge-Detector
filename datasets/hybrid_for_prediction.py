@@ -106,8 +106,7 @@ class HybridExtendDataset(Dataset):
             i, j, h, w = transforms.RandomResizedCrop.get_params(img, scale=self.scale, ratio=self.ratio)
 
             img = tf.resized_crop(img, i, j, h, w, size=self.size, antialias=True)
-
-            edge = torch.ones_like(img)
+            edge = torch.ones([1, *img.shape[1:]])
 
             granularity = torch.tensor(0.0)
 

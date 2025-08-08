@@ -30,8 +30,8 @@ data:
     validation:
       target: datasets.hybrid_for_prediction.HybridExtendDataset
       params:
-         anime_root: '/local_datasets/anime'
-         biped_root: '/local_datasets/BIPED'
+        anime_root: '/local_datasets/anime'
+        biped_root: '/local_datasets/BIPED'
 #        anime_root: 'D:/datasets/anime'
 #        biped_root: 'D:/datasets/BIPED'
         train: False

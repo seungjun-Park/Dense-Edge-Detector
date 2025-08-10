@@ -12,6 +12,8 @@ from modules.norm.layer_norm import LayerNorm
 
 class ResidualBlock(Block):
     def __init__(self,
+                 in_channels: int,
+                 out_channels: int = None,
                  activation: str = 'torch.nn.GELU',
                  use_conv: bool = True,
                  drop_path: float = 0.,
@@ -21,51 +23,53 @@ class ResidualBlock(Block):
                  ):
         super().__init__(*args, **kwargs)
 
+        out_channels = out_channels if out_channels else in_channels
+
         make_activation = load_module(activation)
 
         self.in_block = nn.Sequential(
-            nn.GroupNorm(num_groups, self.in_channels),
+            nn.GroupNorm(num_groups, in_channels),
             make_activation(),
-            nn.Conv2d(self.in_channels, self.out_channels, kernel_size=3, padding=1),
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
         )
 
         self.out_block = nn.Sequential(
-            nn.GroupNorm(num_groups, self.out_channels),
+            nn.GroupNorm(num_groups, out_channels),
             make_activation(),
             zero_module(
-                nn.Conv2d(self.out_channels, self.out_channels, kernel_size=3, padding=1),
+                nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
             ),
         )
 
         self.embed_granularity = nn.Sequential(
             nn.Linear(
                 1,
-                self.out_channels * 2,
+                out_channels * 2,
             ),
             make_activation(),
         )
 
-        if self.in_channels == self.out_channels:
+        if in_channels == out_channels:
             self.shortcut = nn.Identity()
 
         elif use_conv:
             self.shortcut = nn.Conv2d(
-                self.in_channels,
-                self.out_channels,
+                in_channels,
+                out_channels,
                 kernel_size=3,
                 padding=1,
             )
 
         else:
             self.shortcut = nn.Conv2d(
-                self.in_channels,
-                self.out_channels,
+                in_channels,
+                out_channels,
                 kernel_size=1,
             )
 
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
-    def _forward(self, x: torch.Tensor, granularity: torch.Tensor = None) -> torch.Tensor:
+    def _forward(self, x: torch.Tensor, granularity: torch.Tensor) -> torch.Tensor:
         h = self.in_block(x)
         granularity = self.embed_granularity(granularity).type(h.dtype)
         while len(granularity.shape) < len(h.shape):

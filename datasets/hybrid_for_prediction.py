@@ -96,7 +96,7 @@ class HybridExtendDataset(Dataset):
             granularity = torch.from_numpy(np.load(granularity_name))
 
         else:
-            index = random.randint(0, self.real_len)
+            index = random.randint(0, self.real_len - 1)
             img_name = self.img_names[index]
 
             img = cv2.imread(f'{img_name}', cv2.IMREAD_COLOR)
@@ -108,7 +108,7 @@ class HybridExtendDataset(Dataset):
             img = tf.resized_crop(img, i, j, h, w, size=self.size, antialias=True)
             edge = torch.ones(1, *img.shape[1:])
 
-            granularity = torch.tensor(0.0)
+            granularity = torch.tensor([0.0])
 
         return img, edge, granularity
 

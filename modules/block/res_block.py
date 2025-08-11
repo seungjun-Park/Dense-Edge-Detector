@@ -42,11 +42,11 @@ class ResidualBlock(Block):
         )
 
         self.embed_granularity = nn.Sequential(
+            make_activation(),
             nn.Linear(
                 1,
                 out_channels * 2,
             ),
-            make_activation(),
         )
 
         if in_channels == out_channels:

@@ -48,7 +48,7 @@ class GranularityPredictor(Model):
 
     def forward(self, imgs: torch.Tensor, edges: torch.Tensor) -> torch.Tensor:
         f_imgs = self.net(imgs)
-        f_edges = self.net(imgs)
+        f_edges = self.net(edges)
         f_bars = []
         for i in range(5):
             f_bars.append(self.films[i](f_imgs[i], f_edges[i]))
@@ -88,6 +88,38 @@ class GranularityPredictor(Model):
 
         return loss
 
+    def get_features(self, imgs: torch.Tensor, edges: torch.Tensor) -> torch.Tensor:
+        f_imgs = self.net(imgs)
+        f_edges = self.net(imgs)
+        f_bars = []
+        for i in range(5):
+            f_bars.append(self.films[i](f_imgs[i], f_edges[i]))
+
+        val_aligns = 0
+        val_raw = 0
+        val_shift = 0
+
+        for i in range(5):
+            f_img = normalize_tensor(f_imgs[i])
+            f_edge = normalize_tensor(f_edges[i])
+            f_bar = normalize_tensor(f_bars[i])
+
+            d_align = (f_bar - f_edge) ** 2
+            d_raw = (f_img - f_edge) ** 2
+            d_shift = (f_bar - f_img) ** 2
+
+            res_align = spatial_average(self.lins_align[i](d_align), keepdim=True)
+            res_raw = spatial_average(self.lins_raw[i](d_raw), keepdim=True)
+            res_shift = spatial_average(self.lins_shift[i](d_shift), keepdim=True)
+
+            val_aligns += res_align
+            val_raw += res_raw
+            val_shift += res_shift
+
+        granularity = self.logit(val_aligns, val_raw, val_shift)
+
+        return granularity.mean(dim=[2, 3])
+
 
 def spatial_average(in_tens, keepdim=True):
     return in_tens.mean([2,3],keepdim=keepdim)
@@ -101,7 +133,7 @@ def normalize_tensor(in_feat,eps=1e-10):
 class VGG16(torch.nn.Module):
     def __init__(self, requires_grad=False, pretrained=True):
         super(VGG16, self).__init__()
-        vgg_pretrained_features = models.vgg16(pretrained=pretrained).features
+        vgg_pretrained_features = models.vgg16_bn(pretrained=pretrained).features
         self.slice1 = torch.nn.Sequential()
         self.slice2 = torch.nn.Sequential()
         self.slice3 = torch.nn.Sequential()

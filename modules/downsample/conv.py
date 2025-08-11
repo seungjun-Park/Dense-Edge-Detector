@@ -9,6 +9,7 @@ from modules.norm.layer_norm import LayerNorm
 
 class ConvDownSample(DownSample):
     def __init__(self,
+                 in_channels: int,
                  *args,
                  **kwargs
                  ):
@@ -18,8 +19,8 @@ class ConvDownSample(DownSample):
 
         self.down_layer = nn.Sequential(
             nn.Conv2d(
-                self.in_channels,
-                int(self.in_channels * self.scale_factor),
+                in_channels,
+                int(in_channels * self.scale_factor),
                 kernel_size=self.scale_factor,
                 stride=self.scale_factor,
             ),

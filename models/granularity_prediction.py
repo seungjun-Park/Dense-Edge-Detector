@@ -134,7 +134,7 @@ def normalize_tensor(in_feat,eps=1e-10):
 class VGG16(torch.nn.Module):
     def __init__(self, requires_grad=False, pretrained=True):
         super(VGG16, self).__init__()
-        vgg_pretrained_features = models.vgg16_bn(pretrained=pretrained).features
+        vgg_pretrained_features = models.vgg16(pretrained=pretrained).features
         self.slice1 = torch.nn.Sequential()
         self.slice2 = torch.nn.Sequential()
         self.slice3 = torch.nn.Sequential()

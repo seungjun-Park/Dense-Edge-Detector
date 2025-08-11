@@ -48,6 +48,7 @@ class GranularityPredictor(Model):
 
     def forward(self, imgs: torch.Tensor, edges: torch.Tensor) -> torch.Tensor:
         f_imgs = self.net(imgs)
+        edges = edges.repeat(1, 3, 1, 1)
         f_edges = self.net(edges)
         f_bars = []
         for i in range(5):

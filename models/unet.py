@@ -137,24 +137,24 @@ class UNet(Model):
 
         skips = []
         for block in self.encoder:
-            outputs = block(outputs)
+            outputs = block(outputs, granularity)
             if not isinstance(block, ConvDownSample):
                 skips.append(outputs)
 
-        outputs = self.bottle_neck(outputs)
+        outputs = self.bottle_neck(outputs, granularity)
 
         for block in self.decoder:
             if not isinstance(block, ConvUpSample):
                 outputs = torch.cat([outputs, skips.pop()], dim=1)
-            outputs = block(outputs)
+            outputs = block(outputs, granularity)
 
         return self.out(outputs)
 
     def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
-        inputs, targets, _ = batch
-        outputs = self(inputs)
+        inputs, targets, granularity = batch
+        outputs = self(inputs, granularity)
 
-        loss, loss_log = self.loss(inputs, targets, outputs, split='train' if self.training else 'valid')
+        loss, loss_log = self.loss(inputs, targets, outputs, granularity, split='train' if self.training else 'valid')
 
         if self.global_step % self.log_interval == 0:
             self.log_images(inputs, targets, outputs)

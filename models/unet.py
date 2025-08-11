@@ -37,15 +37,11 @@ class UNet(Model):
         self.encoder = nn.ModuleList()
         self.decoder = nn.ModuleList()
 
-        self.encoder.append(
-            nn.Sequential(
-                nn.Conv2d(
-                    in_channels,
-                    embed_dim,
-                    kernel_size=3,
-                    padding=1,
-                ),
-            )
+        self.embed = nn.Conv2d(
+            in_channels,
+            embed_dim,
+            kernel_size=3,
+            padding=1,
         )
 
         in_ch = embed_dim
@@ -75,7 +71,7 @@ class UNet(Model):
 
             in_ch = int(in_ch * sf)
 
-        self.bottle_neck = nn.Sequential(
+        self.bottle_neck = nn.ModuleList([
             ResidualBlock(
                 in_channels=in_ch,
                 use_checkpoint=use_checkpoint,
@@ -89,7 +85,7 @@ class UNet(Model):
                 activation=activation,
                 drop_path=drop_path,
                 num_groups=num_groups,
-            ),
+            )]
         )
 
         for i, sf in list(enumerate(scale_factors))[::-1]:
@@ -133,7 +129,7 @@ class UNet(Model):
         self.save_hyperparameters(ignore='loss_config')
 
     def forward(self, inputs: torch.Tensor, granularity: torch.Tensor) -> torch.Tensor:
-        outputs = inputs
+        outputs = self.embed(inputs)
 
         skips = []
         for block in self.encoder:
@@ -141,7 +137,8 @@ class UNet(Model):
             if not isinstance(block, ConvDownSample):
                 skips.append(outputs)
 
-        outputs = self.bottle_neck(outputs, granularity)
+        for block in self.bottle_neck:
+            outputs = block(outputs, granularity)
 
         for block in self.decoder:
             if not isinstance(block, ConvUpSample):

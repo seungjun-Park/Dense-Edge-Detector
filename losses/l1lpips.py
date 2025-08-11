@@ -43,7 +43,7 @@ class L1LPIPS(Loss):
         lpips_loss = self.perceptual_loss(outputs, targets).mean()
         content_loss = self.perceptual_loss(outputs, inputs).mean()
 
-        granularity_loss = F.l1_loss(granularity, self.granularity(outputs), reduction='mean')
+        granularity_loss = F.l1_loss(granularity, self.granularity(inputs, outputs), reduction='mean')
 
         loss = self.lpips_weight * lpips_loss + self.l1_weight * l1_loss + self.content_weight * content_loss + self.ssim_weight + ssim_loss + granularity_loss
 

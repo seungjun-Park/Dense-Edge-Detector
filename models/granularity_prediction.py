@@ -14,7 +14,6 @@ from modules.block.film import FiLM
 
 class GranularityPredictor(Model):
     def __init__(self,
-                 gamma_max: float = 0.5,
                  use_dropout: bool = True,
                  *args,
                  **kwargs,
@@ -31,7 +30,6 @@ class GranularityPredictor(Model):
             self.films.append(
                 FiLM(
                     in_channels=ch,
-                    gamma_max=gamma_max,
                 )
             )
             self.lins_align.append(

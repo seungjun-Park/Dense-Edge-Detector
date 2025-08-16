@@ -13,6 +13,7 @@ from modules.norm.layer_norm import LayerNorm
 class ResidualBlock(Block):
     def __init__(self,
                  in_channels: int,
+                 embed_channels: int,
                  out_channels: int = None,
                  activation: str = 'torch.nn.GELU',
                  use_conv: bool = True,
@@ -44,7 +45,7 @@ class ResidualBlock(Block):
         self.embed_granularity = nn.Sequential(
             make_activation(),
             nn.Linear(
-                1,
+                embed_channels,
                 out_channels * 2,
             ),
         )

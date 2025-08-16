@@ -34,7 +34,7 @@ class Model(pl.LightningModule, ABC):
         self.log_interval = log_interval
 
         if loss_config is not None:
-            self.loss: Loss = instantiate_from_config(loss_config).eval()
+            self.loss: Loss = instantiate_from_config(loss_config)
         else:
             self.loss = None
 

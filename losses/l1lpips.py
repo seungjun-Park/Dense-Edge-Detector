@@ -17,7 +17,7 @@ class L1LPIPS(Loss):
                  l1_weight: float = 1.0,
                  content_weight: float = 0.5,
                  ssim_weight: float = 1.0,
-                 granularity_weight: float = 10.,
+                 granularity_weight: float = 1.0,
                  *args,
                  **kwargs
                  ):
@@ -47,7 +47,11 @@ class L1LPIPS(Loss):
 
         granularity_loss = F.l1_loss(granularity, self.granularity(inputs, outputs), reduction='mean')
 
-        loss = self.lpips_weight * lpips_loss + self.l1_weight * l1_loss + self.content_weight * content_loss + self.ssim_weight * ssim_loss + self.granularity_weight * granularity_loss
+        loss = (self.lpips_weight * lpips_loss +
+                self.l1_weight * l1_loss +
+                self.content_weight * content_loss +
+                self.ssim_weight * ssim_loss +
+                self.granularity_weight * granularity_loss)
 
         log = {"{}/total_loss".format(split): loss.clone().detach().mean(),
                "{}/l1_loss".format(split): l1_loss.detach().mean(),

@@ -11,6 +11,7 @@ from modules.downsample.conv import ConvDownSample
 from modules.norm.layer_norm import LayerNorm
 from modules.upsample.conv import ConvUpSample
 from modules.block.res_block import ResidualBlock
+from modules.embed.gaussian import GaussianFourierEmbedding
 
 from utils.load_module import load_module
 
@@ -34,8 +35,19 @@ class UNet(Model):
 
         out_channels = out_channels if out_channels is not None else in_channels
 
+        make_activation = load_module(activation)
+
         self.encoder = nn.ModuleList()
         self.decoder = nn.ModuleList()
+
+        granularity_embed_dim = embed_dim * 4
+
+        self.granularity_embed = nn.Sequential(
+            GaussianFourierEmbedding(embed_dim, learnable=True),
+            nn.Linear(embed_dim, granularity_embed_dim),
+            make_activation(),
+            nn.Linear(granularity_embed_dim, granularity_embed_dim),
+        )
 
         self.embed = nn.Conv2d(
             in_channels,
@@ -112,8 +124,6 @@ class UNet(Model):
                     )
                 )
 
-        make_activation = load_module(activation)
-
         self.out = nn.Sequential(
             nn.GroupNorm(num_groups, in_ch),
             make_activation(),
@@ -130,6 +140,7 @@ class UNet(Model):
 
     def forward(self, inputs: torch.Tensor, granularity: torch.Tensor) -> torch.Tensor:
         outputs = self.embed(inputs)
+        granularity = self.granularity_embed(granularity)
 
         skips = []
         for block in self.encoder:

@@ -11,7 +11,7 @@ module:
         l1_weight: 1.0
         ssim_weight: 1.0
         content_weight: 0.5
-        granularity_weight: 10.
+        granularity_weight: 0.
 
     in_channels: 3
     embed_dim: 32
@@ -23,11 +23,12 @@ module:
     use_checkpoint: True
     scale_factors: [ 2, 2, 2 ]
 
+
 data:
   target: datasets.util.DataModuleFromConfig
   params:
     num_workers: 4
-    batch_size: 5
+    batch_size: 4
     wrap: True
     train:
       target: datasets.hybrid_for_prediction.HybridExtendDataset

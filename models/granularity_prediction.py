@@ -11,7 +11,6 @@ from models.model import Model
 from torchvision import models
 from modules.norm.layer_norm import LayerNorm
 from modules.block.film import FiLM
-from modules.block.per_scale_align import PerScaleAlign
 
 
 class GranularityPredictor(Model):

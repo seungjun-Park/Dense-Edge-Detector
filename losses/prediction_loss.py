@@ -69,7 +69,7 @@ class PredictionLoss(nn.Module):
         i_idx, j_idx = i_idx.detach().cpu().tolist(), j_idx.detach().cpu().tolist()
         if len(i_idx) > 0:
             return zip(i_idx, j_idx), labels
-        return None
+        return None, None
 
     def forward(self, g_hat: torch.Tensor, g: torch.Tensor, d_align: torch.Tensor, d_raw: torch.Tensor, d_shift: torch.Tensor, split: str, threshold: float = 0.04) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         log = dict()

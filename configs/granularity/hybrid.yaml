@@ -63,7 +63,7 @@ checkpoints:
     params:
       dirpath: './checkpoints/granularity_prediction/hybrid'
       filename: 'best'
-      monitor: 'valid/total_loss'
+      monitor: 'valid/loss_total'
       mode: 'min'
       save_top_k: 1
 

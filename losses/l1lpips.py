@@ -31,9 +31,10 @@ class L1LPIPS(Loss):
         self.ssim_loss = SSIMLoss(data_range=1.001)
         self.granularity_weight = granularity_weight
 
-        self.granularity = GranularityPredictor.load_from_checkpoint(granularity_ckpt).eval()
-        for p in self.granularity.parameters():
-            p.requires_grad = False
+        if self.granularity_weight > 0.:
+            self.granularity = GranularityPredictor.load_from_checkpoint(granularity_ckpt).eval()
+            for p in self.granularity.parameters():
+                p.requires_grad = False
 
     def forward(self, inputs: torch.Tensor, targets: torch.Tensor, outputs: torch.Tensor,
                 granularity: torch.Tensor, split: str, use_cond: bool = False) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:

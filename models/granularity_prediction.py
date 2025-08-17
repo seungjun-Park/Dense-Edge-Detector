@@ -85,6 +85,17 @@ class GranularityPredictor(Model):
 
         return granularity.reshape((-1, 1))
 
+    def get_features(self, imgs: torch.Tensor, edges: torch.Tensor) -> List[torch.Tensor]:
+        f_imgs = self.net(imgs)
+        if edges.shape[1] == 1:
+            edges = edges.repeat(1, 3, 1, 1)
+        f_edges = self.net(edges)
+        f_bars = []
+        for i in range(5):
+            f_bars.append(self.films[i](f_imgs[i], f_edges[i]))
+
+        return f_imgs, f_edges, f_bars
+
     def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
         images, edges, granularity = batch
         preds, val_align, val_raw, val_shift = self(images, edges, return_val=True)

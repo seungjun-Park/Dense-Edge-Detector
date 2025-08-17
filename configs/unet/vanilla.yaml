@@ -10,12 +10,12 @@ module:
       target: losses.l1lpips.L1LPIPS
       params:
         lpips_weight: 1.0
-        l1_weight: 1.0
+        huber_weight: 1.0
         ssim_weight: 1.0
-        content_weight: 0.5
+        content_weight: 0.6
 
     in_channels: 3
-    embed_dim: 16
+    embed_dim: 32
     out_channels: 1
     num_blocks: 2
     drop_path: 0.1
@@ -33,7 +33,7 @@ data:
     train:
       target: datasets.anime.AnimeDataset
       params:
-        root: '/local_datasets/anime'
+        root: '/local_datasets/anime_high'
         # root: 'D:/datasets/edge_detection/anime'
         train: True
         size: [512, 512]
@@ -43,7 +43,7 @@ data:
     validation:
       target: datasets.anime.AnimeDataset
       params:
-        root: '/local_datasets/anime'
+        root: '/local_datasets/anime_high'
         # root: 'D:/datasets/edge_detection/anime'
         train: False
         size: [512, 512]

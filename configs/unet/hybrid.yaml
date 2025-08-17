@@ -8,9 +8,9 @@ module:
       target: losses.l1lpips.L1LPIPS
       params:
         lpips_weight: 1.0
-        l1_weight: 1.0
+        huber_weight: 1.0
         ssim_weight: 1.0
-        content_weight: 0.5
+        content_weight: 0.6
         granularity_weight: 0.
 
     in_channels: 3

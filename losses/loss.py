@@ -12,5 +12,5 @@ class Loss(nn.Module, ABC):
 
 
     @abstractmethod
-    def forward(self, inputs: torch.Tensor, targets: torch.Tensor, outputs: torch.Tensor, split: str) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    def forward(self, *args, **kwargs) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         pass

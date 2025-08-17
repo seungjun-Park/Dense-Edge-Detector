@@ -70,14 +70,17 @@ class ResidualBlock(Block):
 
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
-    def _forward(self, x: torch.Tensor, granularity: torch.Tensor) -> torch.Tensor:
+    def _forward(self, x: torch.Tensor, granularity: torch.Tensor = None) -> torch.Tensor:
         h = self.in_block(x)
-        granularity = self.embed_granularity(granularity).type(h.dtype)
-        while len(granularity.shape) < len(h.shape):
-            granularity = granularity[..., None]
-        out_norm, out_rest = self.out_block[0], self.out_block[1:]
-        scale, shift = granularity.chunk(2, dim=1)
-        h = out_norm(h) * (1 + scale) + shift
-        h = out_rest(h)
+        if granularity is not None:
+            granularity = self.embed_granularity(granularity).type(h.dtype)
+            while len(granularity.shape) < len(h.shape):
+                granularity = granularity[..., None]
+            out_norm, out_rest = self.out_block[0], self.out_block[1:]
+            scale, shift = granularity.chunk(2, dim=1)
+            h = out_norm(h) * (1 + scale) + shift
+            h = out_rest(h)
+        else:
+            h = self.out_block(h)
 
         return self.drop_path(h) + self.shortcut(x)

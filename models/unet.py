@@ -8,10 +8,10 @@ from collections.abc import Iterable
 
 from models.model import Model
 from modules.downsample.conv import ConvDownSample
-from modules.norm.layer_norm import LayerNorm
 from modules.upsample.conv import ConvUpSample
 from modules.block.res_block import ResidualBlock
 from modules.embed.gaussian import GaussianFourierEmbedding
+from modules.sequential.cond_sequential import ConditionalSequential
 
 from utils.load_module import load_module
 
@@ -28,10 +28,13 @@ class UNet(Model):
                  use_checkpoint: bool = True,
                  scale_factors: int | List[int] | Tuple[int] = 2,
                  num_groups: int = 1,
+                 use_cond: bool = False,
                  *args,
                  **kwargs,
                  ):
         super(UNet, self).__init__(*args, **kwargs)
+
+        self.use_cond = use_cond
 
         out_channels = out_channels if out_channels is not None else in_channels
 
@@ -49,11 +52,10 @@ class UNet(Model):
             nn.Linear(granularity_embed_dim, granularity_embed_dim),
         )
 
-        self.embed = nn.Conv2d(
-            in_channels,
-            embed_dim,
-            kernel_size=3,
-            padding=1,
+        self.encoder.append(
+            ConditionalSequential(
+                nn.Conv2d(in_channels, embed_dim, kernel_size=3, stride=1, padding=1)
+            )
         )
 
         in_ch = embed_dim
@@ -65,11 +67,12 @@ class UNet(Model):
                 self.encoder.append(
                     ResidualBlock(
                         in_channels=in_ch,
+                        embed_channels=granularity_embed_dim,
                         use_checkpoint=use_checkpoint,
                         activation=activation,
                         drop_path=drop_path,
                         num_groups=num_groups,
-                    )
+                    ),
                 )
                 skip_dims.append(in_ch)
 
@@ -83,9 +86,10 @@ class UNet(Model):
 
             in_ch = int(in_ch * sf)
 
-        self.bottle_neck = nn.ModuleList([
+        self.bottle_neck = ConditionalSequential(
             ResidualBlock(
                 in_channels=in_ch,
+                embed_channels=granularity_embed_dim,
                 use_checkpoint=use_checkpoint,
                 activation=activation,
                 drop_path=drop_path,
@@ -93,11 +97,12 @@ class UNet(Model):
             ),
             ResidualBlock(
                 in_channels=in_ch,
+                embed_channels=granularity_embed_dim,
                 use_checkpoint=use_checkpoint,
                 activation=activation,
                 drop_path=drop_path,
                 num_groups=num_groups,
-            )]
+            )
         )
 
         for i, sf in list(enumerate(scale_factors))[::-1]:
@@ -116,6 +121,7 @@ class UNet(Model):
                 self.decoder.append(
                     ResidualBlock(
                         in_channels=in_ch + skip_dims.pop(),
+                        embed_channels=granularity_embed_dim,
                         out_channels=in_ch,
                         use_checkpoint=use_checkpoint,
                         activation=activation,
@@ -138,9 +144,12 @@ class UNet(Model):
 
         self.save_hyperparameters(ignore='loss_config')
 
-    def forward(self, inputs: torch.Tensor, granularity: torch.Tensor) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor, granularity: torch.Tensor=None) -> torch.Tensor:
         outputs = self.embed(inputs)
-        granularity = self.granularity_embed(granularity)
+        if self.use_cond and granularity is not None:
+            granularity = self.granularity_embed(granularity)
+        else:
+            granularity = None
 
         skips = []
         for block in self.encoder:
@@ -148,8 +157,7 @@ class UNet(Model):
             if not isinstance(block, ConvDownSample):
                 skips.append(outputs)
 
-        for block in self.bottle_neck:
-            outputs = block(outputs, granularity)
+        outputs = self.bottle_neck(outputs, granularity)
 
         for block in self.decoder:
             if not isinstance(block, ConvUpSample):

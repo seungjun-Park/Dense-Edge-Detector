@@ -9,7 +9,10 @@ class ConditionalSequential(nn.Sequential):
         super().__init__(*args, **kwargs)
 
     def forward(self, x: torch.Tensor, cond: torch.Tensor = None) -> torch.Tensor:
-        for block in self:
-            x = block(x, cond)
+        for i, block in enumerate(self):
+            if cond is None:
+                x = block(x)
+            else:
+                x = block(x, cond)
 
         return x

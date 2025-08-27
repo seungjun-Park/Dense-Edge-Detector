@@ -13,13 +13,9 @@ import torchvision.transforms.functional as tf
 from typing import Union, List, Tuple
 
 from utils import instantiate_from_config, to_2tuple
-from datasets.util import nearest_multiple
-
-IMG_FORMATS = ['png', 'jpg']
-STR_FORMATS = ['txt', 'csv']
 
 
-class AnimeDataset(Dataset):
+class EdgeGranularityDataset(Dataset):
     def __init__(self,
                  root,
                  train=True,
@@ -35,29 +31,23 @@ class AnimeDataset(Dataset):
         self.scale = list(to_2tuple(scale))
         self.ratio = list(to_2tuple(ratio))
 
-        if train:
-            root = os.path.join(root, 'train')
-        else:
-            root = os.path.join(root, 'val')
+        self.root = root
 
-        self.edge_names = glob.glob(f'{root}/*/edges/*.*')
-        self.img_names = glob.glob(f'{root}/*/images/*.*')
-        self.granularity = glob.glob(f'{root}/*/granularity/*.*')
+        if train:
+            with open("train_pair_datasets.json", "r", encoding="utf-8") as f:
+                self.pairs = json.load(f)
+        else:
+            with open("val_pair_datasets.json", "r", encoding="utf-8") as f:
+                self.pairs = json.load(f)
 
         self.color_jitter = transforms.ColorJitter(brightness=0, contrast=0.5, saturation=0.5, hue=0.5)
         self.invert = transforms.RandomInvert(p=1.0)
         self.horizontal_flip = transforms.RandomHorizontalFlip(p=1.0)
 
-        assert len(self.edge_names) == len(self.img_names)
-
-    def __getitem__(self, index):
-        edge_name = self.edge_names[index]
-        img_name = self.img_names[index]
-        granularity_name = self.granularity[index]
-
-        img = cv2.imread(f'{img_name}', cv2.IMREAD_COLOR)
+    def get_img_edge_pair(self, img_name: str, edge_name: str) -> List[torch.Tensor]:
+        img = cv2.imread(f'{self.root}/{img_name}', cv2.IMREAD_COLOR)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        edge = cv2.imread(f'{edge_name}', cv2.IMREAD_GRAYSCALE)
+        edge = cv2.imread(f'{self.root}/{edge_name}', cv2.IMREAD_GRAYSCALE)
 
         img = self.to_tensor(img)
         edge = self.to_tensor(edge)
@@ -77,9 +67,20 @@ class AnimeDataset(Dataset):
             img = self.horizontal_flip(img)
             edge = self.horizontal_flip(edge)
 
-        granularity = torch.from_numpy(np.load(granularity_name))
+        return img, edge
 
-        return img, edge, granularity
+    def __getitem__(self, index):
+        pair = self.pairs[index]
+        img0_name = pair[0][0]
+        edge0_name = img0_name.replace('images', 'edges')
+        img1_name = pair[0][1]
+        edge1_name = img1_name.replace('images', 'edges')
+        label = torch.tensor([float(pair[1])])
+
+        img0, edge0 = self.get_img_edge_pair(img0_name, edge0_name)
+        img1, edge1 = self.get_img_edge_pair(img1_name, edge1_name)
+
+        return (img0, edge0), (img1, edge1), label
 
     def __len__(self):
-        return len(self.img_names)
+        return len(self.pairs)

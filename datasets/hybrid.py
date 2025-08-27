@@ -17,36 +17,14 @@ from utils import instantiate_from_config, to_2tuple
 
 class HybridDataset(Dataset):
     def __init__(self,
-                 anime_root,
-                 biped_root,
-                 train=True,
+                 anime_root: str,
+                 biped_root: str,
+                 train: bool = True,
                  size: int | List[int] | Tuple[int] = 224,
                  scale: List[float] | Tuple[float] = (0.08, 1.0),
                  ratio: List[float] | Tuple[float] = (1.0, 1.0),
-                 color_space: str = 'rgb',
                  ):
         super().__init__()
-        color_space = color_space.lower()
-        if color_space == 'rgb':
-            self.color_space = cv2.COLOR_BGR2RGB
-        elif color_space == 'rgba':
-            self.color_space = cv2.COLOR_BGR2RGBA
-        elif color_space == 'gray':
-            self.color_space = cv2.COLOR_BGR2GRAY
-        elif color_space == 'xyz':
-            self.color_space = cv2.COLOR_BGR2XYZ
-        elif color_space == 'ycrcb':
-            self.color_space = cv2.COLOR_BGR2YCrCb
-        elif color_space == 'hsv':
-            self.color_space = cv2.COLOR_BGR2HSV
-        elif color_space == 'lab':
-            self.color_space = cv2.COLOR_BGR2LAB
-        elif color_space == 'luv':
-            self.color_space = cv2.COLOR_BGR2LUV
-        elif color_space == 'hls':
-            self.color_space = cv2.COLOR_BGR2HLS
-        elif color_space == 'yuv':
-            self.color_space = cv2.COLOR_BGR2YUV
 
         self.to_tensor = transforms.ToTensor()
 
@@ -65,9 +43,9 @@ class HybridDataset(Dataset):
         self.img_names = [*glob.glob(f'{anime_root}/*/images/*.*'), *glob.glob(f'{biped_root}/*/images/*.*')]
         self.edge_names = [*glob.glob(f'{anime_root}/*/edges/*.*'), *glob.glob(f'{biped_root}/*/edges/*.*')]
         self.granularity = [*glob.glob(f'{anime_root}/*/granularity/*.*'), *glob.glob(f'{biped_root}/*/granularity/*.*')]
-        # self.color_jitter = transforms.ColorJitter(brightness=0, contrast=0.5, saturation=0.5, hue=0.5)
-        # self.invert = transforms.RandomInvert(p=1.0)
-        # self.horizontal_flip = transforms.RandomHorizontalFlip(p=1.0)
+        self.color_jitter = transforms.ColorJitter(brightness=0, contrast=0.5, saturation=0.5, hue=0.5)
+        self.invert = transforms.RandomInvert(p=1.0)
+        self.horizontal_flip = transforms.RandomHorizontalFlip(p=1.0)
 
         assert len(self.img_names) == len(self.edge_names)
 
@@ -77,7 +55,7 @@ class HybridDataset(Dataset):
         granularity_name = self.granularity[index]
 
         img = cv2.imread(f'{img_name}', cv2.IMREAD_COLOR)
-        img = cv2.cvtColor(img, self.color_space)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         edge = cv2.imread(f'{edge_name}', cv2.IMREAD_GRAYSCALE)
 
         img = self.to_tensor(img)
@@ -88,6 +66,16 @@ class HybridDataset(Dataset):
 
         img = tf.resized_crop(img, i, j, h, w, size=self.size, antialias=True)
         edge = tf.resized_crop(edge, i, j, h, w, size=self.size, antialias=True)
+
+        if random.random() < 0.5:
+            if random.random() < 0.5:
+                img = self.color_jitter(img)
+            else:
+                img = self.invert(img)
+
+        if random.random() < 0.5:
+            img = self.horizontal_flip(img)
+            edge = self.horizontal_flip(edge)
 
         granularity = torch.from_numpy(np.load(granularity_name))
 

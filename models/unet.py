@@ -52,10 +52,8 @@ class UNet(Model):
             nn.Linear(granularity_embed_dim, granularity_embed_dim),
         )
 
-        self.encoder.append(
-            ConditionalSequential(
-                nn.Conv2d(in_channels, embed_dim, kernel_size=3, stride=1, padding=1)
-            )
+        self.embed = nn.Sequential(
+            nn.Conv2d(in_channels, embed_dim, kernel_size=3, stride=1, padding=1),
         )
 
         in_ch = embed_dim
@@ -74,6 +72,7 @@ class UNet(Model):
                         num_groups=num_groups,
                     ),
                 )
+
                 skip_dims.append(in_ch)
 
             self.encoder.append(
@@ -137,19 +136,16 @@ class UNet(Model):
                 in_ch,
                 out_channels,
                 kernel_size=3,
-                padding=1,
+                padding=1
             ),
-            nn.Sigmoid(),
+            nn.Sigmoid()
         )
 
         self.save_hyperparameters(ignore='loss_config')
 
-    def forward(self, inputs: torch.Tensor, granularity: torch.Tensor=None) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor, granularity: torch.Tensor) -> torch.Tensor:
         outputs = self.embed(inputs)
-        if self.use_cond and granularity is not None:
-            granularity = self.granularity_embed(granularity)
-        else:
-            granularity = None
+        granularity = self.granularity_embed(granularity)
 
         skips = []
         for block in self.encoder:

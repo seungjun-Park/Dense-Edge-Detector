@@ -10,12 +10,12 @@ module:
       target: losses.l1lpips.L1LPIPS
       params:
         lpips_weight: 1.0
-        huber_weight: 1.0
+        l1_weight: 1.0
         ssim_weight: 1.0
-        content_weight: 0.6
+        content_weight: 0.4
 
     in_channels: 3
-    embed_dim: 32
+    embed_dim: 16
     out_channels: 1
     num_blocks: 2
     drop_path: 0.1
@@ -23,18 +23,19 @@ module:
     mode: 'bilinear'
     use_checkpoint: True
     scale_factors: [ 2, 2, 2 ]
+    use_cond: False
 
 data:
   target: datasets.util.DataModuleFromConfig
   params:
     num_workers: 4
-    batch_size: 4
+    batch_size: 2
     wrap: True
     train:
       target: datasets.anime.AnimeDataset
       params:
-        root: '/local_datasets/anime_high'
-        # root: 'D:/datasets/edge_detection/anime'
+#        root: '/local_datasets/anime_high'
+        root: 'D:/datasets/anime_high'
         train: True
         size: [512, 512]
         scale: [ 0.5, 1.0 ]
@@ -43,8 +44,8 @@ data:
     validation:
       target: datasets.anime.AnimeDataset
       params:
-        root: '/local_datasets/anime_high'
-        # root: 'D:/datasets/edge_detection/anime'
+#        root: '/local_datasets/anime_high'
+        root: 'D:/datasets/anime_high'
         train: False
         size: [512, 512]
         scale: [ 0.5, 1.0 ]
@@ -80,5 +81,5 @@ checkpoints:
 trainer:
   accelerator: 'gpu'
   max_epochs: 200
-  accumulate_grad_batches: 1
+  accumulate_grad_batches: 5
   # precision: 'bf16'

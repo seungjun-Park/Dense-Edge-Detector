@@ -79,6 +79,9 @@ class Model(pl.LightningModule, ABC):
                                     betas=(0.5, 0.9),
                                     )
 
-        opts = [opt_net]
+        schedular_net = torch.optim.lr_scheduler.CosineAnnealingLR(opt_net, T_max=50, eta_min=0)
 
-        return opts
+        opts = [opt_net]
+        schs = [schedular_net]
+
+        return opts, schs

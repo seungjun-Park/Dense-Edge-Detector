@@ -26,8 +26,8 @@ class Block(nn.Module, ABC):
             nn.init.constant_(module.bias, 0)
             nn.init.constant_(module.weight, 1.0)
 
-    def forward(self, *args) -> torch.Tensor:
-        return checkpoint(self._forward, (*args,), self.parameters(), flag=self.use_checkpoint)
+    def forward(self, *args, **kwargs) -> torch.Tensor:
+        return checkpoint(self._forward, (*[x for x in args if x is not None ],), self.parameters(), flag=self.use_checkpoint)
 
 
     @abstractmethod

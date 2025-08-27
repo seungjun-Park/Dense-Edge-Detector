@@ -13,7 +13,7 @@ from modules.norm.layer_norm import LayerNorm
 class ResidualBlock(Block):
     def __init__(self,
                  in_channels: int,
-                 embed_channels: int,
+                 embed_channels: int = None,
                  out_channels: int = None,
                  activation: str = 'torch.nn.GELU',
                  use_conv: bool = True,
@@ -42,13 +42,16 @@ class ResidualBlock(Block):
             ),
         )
 
-        self.embed_granularity = nn.Sequential(
-            make_activation(),
-            nn.Linear(
-                embed_channels,
-                out_channels * 2,
-            ),
-        )
+        if embed_channels is None:
+            self.embed_granularity = nn.Identity()
+        else:
+            self.embed_granularity = nn.Sequential(
+                make_activation(),
+                nn.Linear(
+                    embed_channels,
+                    out_channels * 2,
+                ),
+            )
 
         if in_channels == out_channels:
             self.shortcut = nn.Identity()
@@ -74,12 +77,13 @@ class ResidualBlock(Block):
         h = self.in_block(x)
         if granularity is not None:
             granularity = self.embed_granularity(granularity).type(h.dtype)
-            while len(granularity.shape) < len(h.shape):
+            while len(granularity.shape) < len(x.shape):
                 granularity = granularity[..., None]
             out_norm, out_rest = self.out_block[0], self.out_block[1:]
             scale, shift = granularity.chunk(2, dim=1)
             h = out_norm(h) * (1 + scale) + shift
             h = out_rest(h)
+
         else:
             h = self.out_block(h)
 

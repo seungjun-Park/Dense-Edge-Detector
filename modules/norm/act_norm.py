@@ -2,29 +2,63 @@ import torch
 import torch.nn as nn
 
 
-# ---------------------------
-# ActNorm (data-dependent init)
-# ---------------------------
-class ActNorm2d(nn.Module):
-    def __init__(self,
-                 dim: int,
-                 eps=1e-6,
-                 ):
+class ActNorm(nn.Module):
+    def __init__(self, num_features, logdet=False, affine=True,
+                 allow_reverse_init=False):
+        assert affine
         super().__init__()
-        self.bias = nn.Parameter(torch.zeros(1, dim, 1, 1))
-        self.logs = nn.Parameter(torch.zeros(1, dim, 1, 1))
-        self.eps = eps
-        self.initialized = False
+        self.logdet = logdet
+        self.loc = nn.Parameter(torch.zeros(1, num_features, 1, 1))
+        self.scale = nn.Parameter(torch.ones(1, num_features, 1, 1))
+        self.allow_reverse_init = allow_reverse_init
 
-    @torch.no_grad()
-    def _init(self, x):
-        m = x.mean((0, 2, 3), keepdim=True)
-        s = x.std((0, 2, 3), keepdim=True).clamp_min(self.eps)
-        self.bias.copy_(-m)
-        self.logs.copy_(-s.log())
-        self.initialized = True
+        self.register_buffer('initialized', torch.tensor(0, dtype=torch.uint8))
 
-    def forward(self, x):
-        if not self.initialized:
-            self._init(x)
-        return (x + self.bias) * torch.exp(self.logs)
+    def initialize(self, input):
+        with torch.no_grad():
+            flatten = input.permute(1, 0, 2, 3).contiguous().view(input.shape[1], -1)
+            mean = (
+                flatten.mean(1)
+                .unsqueeze(1)
+                .unsqueeze(2)
+                .unsqueeze(3)
+                .permute(1, 0, 2, 3)
+            )
+            std = (
+                flatten.std(1)
+                .unsqueeze(1)
+                .unsqueeze(2)
+                .unsqueeze(3)
+                .permute(1, 0, 2, 3)
+            )
+
+            self.loc.data.copy_(-mean)
+            self.scale.data.copy_(1 / (std + 1e-6))
+
+    def forward(self, input, reverse=False):
+        if reverse:
+            return self.reverse(input)
+        if len(input.shape) == 2:
+            input = input[:,:,None,None]
+            squeeze = True
+        else:
+            squeeze = False
+
+        _, _, height, width = input.shape
+
+        if self.training and self.initialized.item() == 0:
+            self.initialize(input)
+            self.initialized.fill_(1)
+
+        h = self.scale * (input + self.loc)
+
+        if squeeze:
+            h = h.squeeze(-1).squeeze(-1)
+
+        if self.logdet:
+            log_abs = torch.log(torch.abs(self.scale))
+            logdet = height*width*torch.sum(log_abs)
+            logdet = logdet * torch.ones(input.shape[0]).to(input)
+            return h, logdet
+
+        return h

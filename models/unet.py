@@ -166,7 +166,7 @@ class UNet(Model):
         inputs, targets, granularity = batch
         outputs = self(inputs, granularity)
 
-        loss, loss_log = self.loss(inputs, targets, outputs, granularity, split='train' if self.training else 'valid')
+        loss, loss_log = self.loss(inputs, targets, outputs, granularity, self.global_step, split='train' if self.training else 'valid')
 
         if self.global_step % self.log_interval == 0:
             self.log_images(inputs, targets, outputs)

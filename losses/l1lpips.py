@@ -17,7 +17,7 @@ class L1LPIPS(Loss):
                  l1_weight: float = 1.0,
                  content_weight: float = 0.5,
                  ssim_weight: float = 1.0,
-                 granularity_weight: float = 0.,
+                 granularity_weight: float = 1.0,
                  start_step: int = 0,
                  *args,
                  **kwargs

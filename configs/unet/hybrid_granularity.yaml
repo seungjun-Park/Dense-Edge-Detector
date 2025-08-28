@@ -12,6 +12,7 @@ module:
         ssim_weight: 1.0
         content_weight: 0.0
         start_step: 800
+        granularity_ckpt: './checkpoints/granularity/discriminator/best.ckpt'
 
     in_channels: 3
     embed_dim: 32

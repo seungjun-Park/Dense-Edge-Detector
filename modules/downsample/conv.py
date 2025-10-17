@@ -10,19 +10,21 @@ from modules.norm.layer_norm import LayerNorm
 class ConvDownSample(DownSample):
     def __init__(self,
                  in_channels: int,
+                 out_channels: int = None,
                  *args,
                  **kwargs
                  ):
         super().__init__(*args, **kwargs)
 
-        self.scale_factor = int(self.scale_factor)
+        out_channels = out_channels if out_channels else in_channels
 
         self.down_layer = nn.Sequential(
             nn.Conv2d(
                 in_channels,
-                int(in_channels * self.scale_factor),
-                kernel_size=self.scale_factor,
-                stride=self.scale_factor,
+                out_channels,
+                kernel_size=3,
+                stride=2,
+                padding=1
             ),
         )
 

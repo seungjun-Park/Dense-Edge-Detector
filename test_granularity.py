@@ -24,7 +24,9 @@ from torchvision.transforms import InterpolationMode
 from utils import instantiate_from_config
 from models.model import Model
 from models.discriminator import Discriminator
+from models.lpieps import LPIEPS
 from models.unet import UNet
+from taming.modules.losses import LPIPS
 
 
 def get_parser(**parser_kwargs):
@@ -44,101 +46,153 @@ def get_parser(**parser_kwargs):
 
 
 def test():
-    # model = GranularityPredictor.load_from_checkpoint('./checkpoints/granularity_prediction/hybrid/best.ckpt', strict=False).eval().cuda()
-    # model = UNet.load_from_checkpoint('./checkpoints/unet/vanilla/best.ckpt', strict=False).eval().cuda()
-    model = Discriminator.load_from_checkpoint('./checkpoints/granularity/discriminator/best.ckpt').eval().cuda()
-    data_path = 'D:/datasets/anime/*/*'
-    data_path = 'D:/datasets/BIPED/*/v3'
-    file_names = zip(glob.glob(f'{data_path}/images/*.*'), glob.glob(f'{data_path}/edges/*.*'), glob.glob(f'{data_path}/granularity/*.*'))
-    # file_names = zip(['D:/datasets/anime/train/surtr/images/20.png'], ['D:/datasets/anime/train/surtr/edges/20.png'])
+    model = LPIEPS.load_from_checkpoint('./checkpoints/lpieps/vgg/best.ckpt', strict=False).eval().cuda()
+    model.loss = None
+    # print(model.lins[0].model[1].weight)
+    # for lin in model.lins:
+    #     print(torch.where(lin.model[1].weight < 0.))
+    data_path = 'D:/datasets/anime/train/*'
+    # data_path = 'D:/datasets/BIPED/*'
+    file_names = zip(glob.glob(f'{data_path}/images/*.*'), glob.glob(f'{data_path}/edges_0/*.*'), glob.glob(f'{data_path}/edges_1/*.*'), glob.glob(f'{data_path}/edges_2/*.*'))
+    avg_scores = []
     with torch.inference_mode():
         for names in file_names:
-            granularity = torch.from_numpy(np.load(names[2])).cuda()
             img = cv2.imread(f'{names[0]}', cv2.IMREAD_COLOR)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             img = torchvision.transforms.ToTensor()(img).cuda()
 
-            edge = cv2.imread(f'{names[1]}', cv2.IMREAD_GRAYSCALE)
-            edge = torchvision.transforms.ToTensor()(edge).cuda()
-
-            img = torchvision.transforms.Resize(800, interpolation=InterpolationMode.BICUBIC, antialias=True, max_size=1200)(img)
-            edge = torchvision.transforms.Resize(800, interpolation=InterpolationMode.BICUBIC, antialias=True, max_size=1200)(edge)
+            img = torchvision.transforms.Resize(800, interpolation=InterpolationMode.BICUBIC, antialias=True,
+                                                max_size=1200)(img)
             c, h, w = img.shape
             img = img.unsqueeze(0)
-            edge = edge.unsqueeze(0)
             if w % 8 != 0:
                 w = int(round(w / 8) * 8)
             if h % 8 != 0:
                 h = int(round(h / 8) * 8)
-
             img = F.interpolate(img, [h, w], mode='bicubic', antialias=True)
-            edge = F.interpolate(edge, [h, w], mode='bicubic', antialias=True)
-            # edge = torch.ones(1, 1, *img.shape[2:]).cuda()
 
-            score = model(img, edge).squeeze(0).cpu().numpy()
-            # np.save(f'{names[2]}', score)
-            # score_l = np.load(f'{names[2]}')
+            scores = []
+            for i in range(1, 4):
+                edge = cv2.imread(f'{names[i]}', cv2.IMREAD_GRAYSCALE)
+                edge = torchvision.transforms.ToTensor()(edge).cuda()
 
-            print(f'{names[0]}: {granularity}, {score}')
+                edge = torchvision.transforms.Resize(720, interpolation=InterpolationMode.BICUBIC, antialias=True,
+                                                     max_size=800)(edge)
+                edge = edge.unsqueeze(0)
+                edge = F.interpolate(edge, [h, w], mode='bicubic', antialias=True)
+                # edge = torch.ones(1, 1, *img.shape[2:]).cuda()
 
-            pil = torchvision.transforms.ToPILImage()
+                score = model(img, edge).reshape(1).cpu()[0]
+                scores.append(score)
+            avg_scores.append(torch.tensor(scores))
+            print(f'{names[0]}: {scores}')
 
-            # f_imgs, f_edges, f_bars = model.get_features(img, edge)
-            # for i in range(5):
-            #     for n in ['f_imgs', 'f_edges', 'f_bars']:
-            #         os.makedirs(f'features/{i}/{n}', exist_ok=True)
-            #     for j in range(f_imgs[i][0].shape[0]):
-            #
-            #         f_img = pil(F.sigmoid(f_imgs[i][0][j]))
-            #         f_edge = pil(F.sigmoid(f_edges[i][0][j]))
-            #         f_bar = pil(F.sigmoid(f_bars[i][0][j]))
-            #
-            #         f_img.save(f'features/{i}/f_imgs/{j}.png', 'png')
-            #         f_edge.save(f'features/{i}/f_edges/{j}.png', 'png')
-            #         f_bar.save(f'features/{i}/f_bars/{j}.png', 'png')
+            # pil = torchvision.transforms.ToPILImage()
 
-            # feats = model.get_features(img)
-            # for i, feat in enumerate(feats):
-            #     os.makedirs(f'features_e/{i}/', exist_ok=True)
-            #     for j, f in enumerate(feat[0]):
-            #         f = pil(F.sigmoid(f))
-            #         f.save(f'features_e/{i}/{j}.png', 'png')
+    avg_scores = torch.stack(avg_scores, dim=1)
+    scores_1, scores_2, scores_3 = torch.chunk(avg_scores, 3, dim=0)
+    scores_1 = scores_1.mean()
+    scores_2 = scores_2.mean()
+    scores_3 = scores_3.mean()
+
+    print(scores_1, scores_2, scores_3)
+
+def visualization():
+    model = LPIEPS.load_from_checkpoint('./checkpoints/lpieps/convnext/best.ckpt', strict=False).eval().cuda()
+    model.loss = None
+    data_path = 'D:/datasets/anime/*/*'
+    # data_path = 'D:/datasets/BIPED/*'
+    file_names = zip(glob.glob(f'{data_path}/images/*.*'), glob.glob(f'{data_path}/edges_0/*.*'),
+                     glob.glob(f'{data_path}/edges_1/*.*'), glob.glob(f'{data_path}/edges_2/*.*'))
+
+    with torch.inference_mode():
+        pil = torchvision.transforms.ToPILImage()
+        for names in file_names:
+            img = cv2.imread(f'{names[0]}', cv2.IMREAD_COLOR)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img = torchvision.transforms.ToTensor()(img).cuda()
+
+            img = torchvision.transforms.Resize(800, interpolation=InterpolationMode.BICUBIC, antialias=True,
+                                                max_size=1200)(img)
+            c, h, w = img.shape
+            img = img.unsqueeze(0)
+            if w % 8 != 0:
+                w = int(round(w / 8) * 8)
+            if h % 8 != 0:
+                h = int(round(h / 8) * 8)
+            img = F.interpolate(img, [h, w], mode='bicubic', antialias=True)
+
+            scores = []
+            for i in range(1, 4):
+                edge = cv2.imread(f'{names[i]}', cv2.IMREAD_GRAYSCALE)
+                edge = torchvision.transforms.ToTensor()(edge).cuda()
+
+                edge = torchvision.transforms.Resize(800, interpolation=InterpolationMode.BICUBIC, antialias=True,
+                                                     max_size=1200)(edge)
+                edge = edge.unsqueeze(0)
+                edge = F.interpolate(edge, [h, w], mode='bicubic', antialias=True)
+                # edge = torch.ones(1, 1, *img.shape[2:]).cuda()
+
+                feats_imgs, moderators, feats_edges = model._get_features(img, edge)
+
+                for level, (feat_imgs, moderator, feat_edges) in enumerate(zip(feats_imgs, moderators, feats_edges)):
+                    os.makedirs(f'./feats/imgs/{level}', exist_ok=True)
+                    os.makedirs(f'./feats/moderators/{level}', exist_ok=True)
+                    os.makedirs(f'./feats/edges/{level}', exist_ok=True)
+                    feat_imgs = F.sigmoid(feat_imgs.squeeze(0)).cpu()
+                    moderator = F.sigmoid(moderator.squeeze(0)).cpu()
+                    feat_edges = F.sigmoid(feat_edges.squeeze(0)).cpu()
+                    for idx, (im, m, e) in enumerate(zip(feat_imgs, moderator, feat_edges)):
+                        pil(im).save(f'./feats/imgs/{level}/{idx}.png')
+                        pil(m).save(f'./feats/moderators/{level}/{idx}.png')
+                        pil(e).save(f'./feats/edges/{level}/{idx}.png')
+
+            print(f'{names[0]}: {scores}')
 
 
-def validate():
-    parsers = get_parser()
+def save_score():
+    model1 = LPIEPS.load_from_checkpoint('./checkpoints/lpieps/convnext/best.ckpt', strict=False).eval().cuda()
+    model2 = LPIEPS.load_from_checkpoint('./checkpoints/lpieps/vgg/best.ckpt', strict=False).eval().cuda()
+    data_path = 'D:/datasets/anime/*/*'
+    # data_path = 'D:/datasets/BIPED/*'
+    data_path = glob.glob(data_path)
+    with torch.inference_mode():
+        for path in data_path:
+            file_names = zip(glob.glob(f'{path}/images/*.*'), glob.glob(f'{path}/edges_0/*.*'),
+                             glob.glob(f'{path}/edges_1/*.*'), glob.glob(f'{path}/edges_2/*.*'))
+            for i, names in enumerate(file_names):
+                img = cv2.imread(f'{names[0]}', cv2.IMREAD_COLOR)
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                img = torchvision.transforms.ToTensor()(img).cuda()
 
-    opt, unknown = parsers.parse_known_args()
+                img = torchvision.transforms.Resize(800, interpolation=InterpolationMode.BICUBIC, antialias=True,
+                                                    max_size=1200)(img)
+                c, h, w = img.shape
+                img = img.unsqueeze(0)
+                if w % 8 != 0:
+                    w = int(round(w / 8) * 8)
+                if h % 8 != 0:
+                    h = int(round(h / 8) * 8)
+                img = F.interpolate(img, [h, w], mode='bicubic', antialias=True)
 
-    # init and save configs
-    configs = [OmegaConf.load(cfg) for cfg in opt.base]
-    cli = OmegaConf.from_dotlist(unknown)
-    config = OmegaConf.merge(*configs, cli)
+                edge = cv2.imread(f'{names[2]}', cv2.IMREAD_GRAYSCALE)
+                edge = torchvision.transforms.ToTensor()(edge).cuda()
 
-    datamodule = instantiate_from_config(config.data)
-    datamodule.prepare_data()
-    datamodule.setup()
+                edge = torchvision.transforms.Resize(800, interpolation=InterpolationMode.BICUBIC, antialias=True,
+                                                     max_size=1200)(edge)
+                edge = edge.unsqueeze(0)
+                edge = F.interpolate(edge, [h, w], mode='bicubic', antialias=True)
 
-    model = Discriminator.load_from_checkpoint('./checkpoints/granularity/discriminator/best.ckpt').eval().cuda()
+                score1 = model1(img, edge).reshape(1).cpu()[0].numpy()
+                score2 = model2(img, edge).reshape(1).cpu()[0].numpy()
+                score = (score1 + score2) / 2
 
-    results = []
+                os.makedirs(f'{path}/lpieps', exist_ok=True)
+                np.save(f'{path}/lpieps/{i}', score)
 
-    threshold = 0.1
-
-    for pair0, pair1, margin in tqdm.tqdm(datamodule.val_dataloader()):
-        with torch.inference_mode():
-            score0 = model(pair0[0].cuda(), pair0[1].cuda()).cpu()
-            score1 = model(pair1[0].cuda(), pair1[1].cuda()).cpu()
-
-        result = ((score0 - score1) * margin.sign() >= (margin.abs() - threshold)).long()
-        results.append(result)
-
-    results = torch.cat(results, dim=0)
-    l = results.shape[0]
-    s = results.sum()
-    print(s / l)
-
+                print(f'{names[2]}: {score}')
 
 if __name__ == '__main__':
-    # validate()
+    # visualization()
     test()
+    # save_score()

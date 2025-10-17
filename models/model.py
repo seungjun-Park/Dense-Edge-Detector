@@ -35,6 +35,8 @@ class Model(pl.LightningModule, ABC):
 
         if loss_config is not None:
             self.loss: Loss = instantiate_from_config(loss_config)
+            # for param in self.loss.parameters():
+            #     param.requires_grad = False
         else:
             self.loss = None
 
@@ -64,12 +66,10 @@ class Model(pl.LightningModule, ABC):
         return self.step(batch, batch_idx)
 
     @torch.no_grad()
-    def log_images(self, inputs: torch.Tensor, targets: torch.Tensor, outputs: torch.Tensor):
+    def log_images(self, imgs: torch.Tensor, name: str):
         prefix = 'train' if self.training else 'val'
         tb = self.logger.experiment
-        tb.add_image(f'{prefix}/inputs', inputs[0].float(), self.global_step, dataformats='CHW')
-        tb.add_image(f'{prefix}/targets', targets[0].float(), self.global_step, dataformats='CHW')
-        tb.add_image(f'{prefix}/outputs', outputs[0].float(), self.global_step, dataformats='CHW')
+        tb.add_image(f'{prefix}/{name}', imgs[0].float(), self.global_step, dataformats='CHW')
 
     def configure_optimizers(self) -> Any:
         params = list(self.parameters())

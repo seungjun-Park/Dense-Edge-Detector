@@ -3,22 +3,26 @@ import torch.nn.functional as F
 
 from piq import SSIMLoss
 
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Optional
 from taming.modules.losses import LPIPS
 from losses.loss import Loss
 
 from models.discriminator import Discriminator
+from models.lpieps import LPIEPS
 
 
 class L1LPIPS(Loss):
     def __init__(self,
-                 granularity_ckpt: str = './checkpoints/granularity_prediction/hybrid/best.ckpt',
+                 lpieps_ckpt: str = './checkpoints/lpieps/vgg/best.ckpt',
                  lpips_weight: float = 1.0,
                  l1_weight: float = 1.0,
-                 content_weight: float = 0.5,
-                 ssim_weight: float = 1.0,
-                 granularity_weight: float = 1.0,
-                 start_step: int = 0,
+                 lpieps_start_step: int = 1e-3,
+                 ema_decay: float = 0.99,
+                 ema_lpieps_lv0: float = 0.4188,
+                 ema_lpieps_lv2: float = 0.9916,
+                 lpieps_lv0_weight: float = 1.0,
+                 lpieps_lv1_weight: float = 1.0,
+                 lpieps_lv2_weight: float = 1.0,
                  *args,
                  **kwargs
                  ):
@@ -27,16 +31,20 @@ class L1LPIPS(Loss):
         self.perceptual_loss = LPIPS().eval()
         self.lpips_weight = lpips_weight
         self.l1_weight = l1_weight
-        self.content_weight = content_weight
-        self.ssim_weight = ssim_weight
-        self.ssim_loss = SSIMLoss(data_range=1.001)
-        self.granularity_weight = granularity_weight
-        self.start_step = start_step
+        self.lpieps_start_step = lpieps_start_step
 
-        if self.granularity_weight > 0.:
-            self.granularity = Discriminator.load_from_checkpoint(granularity_ckpt).eval()
-            for p in self.granularity.parameters():
-                p.requires_grad = False
+        self.ema_decay = ema_decay
+
+        self.register_buffer('ema_lpieps_lv0', torch.tensor(ema_lpieps_lv0))
+        self.register_buffer('ema_lpieps_lv2', torch.tensor(ema_lpieps_lv2))
+
+        self.lpieps = LPIEPS.load_from_checkpoint(f'{lpieps_ckpt}', strict=False).eval()
+        self.lpieps_lv0_weight = lpieps_lv0_weight
+        self.lpieps_lv1_weight = lpieps_lv1_weight
+        self.lpieps_lv2_weight = lpieps_lv2_weight
+
+        for param in self.lpieps.parameters():
+            param.requires_grad = False
 
     def l1_edge_weight(self, edge: torch.Tensor) -> torch.Tensor:
         weight = torch.ones_like(edge).to(edge.device)
@@ -44,38 +52,62 @@ class L1LPIPS(Loss):
 
         return weight
 
-
-    def forward(self, inputs: torch.Tensor, targets: torch.Tensor, outputs: torch.Tensor,
-                granularity: torch.Tensor, global_step: int,  split: str) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    def get_l1lpips_loss(self, outputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         l1_loss = (F.l1_loss(outputs, targets, reduction='none') * self.l1_edge_weight(targets)).mean()
-        ssim_loss = self.ssim_loss(outputs, targets).mean()
-        granularity_loss = F.l1_loss(granularity, self.granularity(inputs, outputs))
+
+        loss = l1_loss * self.l1_weight
 
         targets = targets.repeat(1, 3, 1, 1).contiguous()
         outputs = outputs.repeat(1, 3, 1, 1).contiguous()
 
-        lpips_loss = self.perceptual_loss(outputs, targets).mean()
-        content_loss = self.perceptual_loss(outputs, inputs).mean()
+        if self.lpips_weight > 0.:
+            lpips_loss = self.perceptual_loss(targets, outputs).mean()
+            loss += lpips_loss * self.lpips_weight
 
-        loss = (self.lpips_weight * lpips_loss +
-                self.l1_weight * l1_loss +
-                self.content_weight * content_loss +
-                self.ssim_weight * ssim_loss)
+        return loss
 
-        log = {"{}/total_loss".format(split): loss.clone().detach().mean(),
-               "{}/l1_loss".format(split): l1_loss.detach().mean(),
-               "{}/lpips_loss".format(split): lpips_loss.detach().mean(),
-               "{}/content_loss".format(split): content_loss.detach().mean(),
-               "{}/ssim_loss".format(split): ssim_loss.detach().mean(),
-               "{}/granularity_loss".format(split): granularity_loss.detach().mean(),
-               }
+    def forward(self, imgs: torch.Tensor,
+                edges0: torch.Tensor, edges1: torch.Tensor, edges2: torch.Tensor,
+                preds0: torch.Tensor, preds1: torch.Tensor, preds2: torch.Tensor,
+                global_step: int,  split: str) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
 
-        if global_step > self.start_step:
-            loss += self.granularity_weight * granularity_loss
+        log_dict = {}
 
-            log.update({f"{split}/granularity_loss": granularity_loss.detach().mean()})
+        loss_lv_0 = self.get_l1lpips_loss(preds0, edges0)
+        loss_lv_1 = self.get_l1lpips_loss(preds1, edges1)
+        loss_lv_2 = self.get_l1lpips_loss(preds2, edges2)
 
-        return loss, log
+        if global_step > self.lpieps_start_step:
+            lpieps_lv0 = torch.clamp(self.lpieps(imgs, preds0), max=1.2)
+            lpieps_lv1 = torch.clamp(self.lpieps(imgs, preds1), max=1.2)
+            lpieps_lv2 = torch.clamp(self.lpieps(imgs, preds2), max=1.2)
+            with torch.no_grad():
+                self.ema_lpieps_lv0 = self.ema_decay * self.ema_lpieps_lv0 + (1 - self.ema_decay) * lpieps_lv0
+                self.ema_lpieps_lv2 = self.ema_decay * self.ema_lpieps_lv2 + (1 - self.ema_decay) * lpieps_lv2
+
+            margin = (self.ema_lpieps_lv0 - self.ema_lpieps_lv2) / 2.0
+
+            loss_dist_from_lv0 = torch.abs((self.ema_lpieps_lv0 - lpieps_lv1) - margin)
+            loss_dist_from_lv2 = torch.abs((lpieps_lv1 - self.ema_lpieps_lv2) - margin)
+            consistency_loss = loss_dist_from_lv0 + loss_dist_from_lv2
+
+            log_dict.update({f'{split}/lpieps_lv0': lpieps_lv0.clone().detach().mean()})
+            log_dict.update({f'{split}/lpieps_lv1': lpieps_lv1.clone().detach().mean()})
+            log_dict.update({f'{split}/lpieps_lv2': lpieps_lv2.clone().detach().mean()})
+
+            loss_lv_0 += lpieps_lv0.mean() * self.lpieps_lv0_weight
+            loss_lv_1 += consistency_loss.mean() * self.lpieps_lv1_weight
+            loss_lv_2 += -lpieps_lv2.mean() * self.lpieps_lv2_weight
+
+        loss = loss_lv_0 + loss_lv_1 + loss_lv_2
+
+        log_dict.update({f'{split}/total_loss': loss.clone().detach().mean()})
+        log_dict.update({f'{split}/loss_lv_0': loss_lv_0.clone().detach().mean()})
+        log_dict.update({f'{split}/loss_lv_1': loss_lv_1.clone().detach().mean()})
+        log_dict.update({f'{split}/loss_lv_2': loss_lv_2.clone().detach().mean()})
+
+
+        return loss, log_dict
 
 
 

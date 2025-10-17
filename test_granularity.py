@@ -46,12 +46,11 @@ def get_parser(**parser_kwargs):
 
 
 def test():
-    model = LPIEPS.load_from_checkpoint('./checkpoints/lpieps/vgg/best.ckpt', strict=False).eval().cuda()
-    model.loss = None
+    model = LPIEPS.load_from_checkpoint('./checkpoints/lpieps/convnext/best-v1.ckpt', strict=False).eval().cuda()
     # print(model.lins[0].model[1].weight)
     # for lin in model.lins:
     #     print(torch.where(lin.model[1].weight < 0.))
-    data_path = 'D:/datasets/anime/train/*'
+    data_path = 'D:/datasets/anime/*/*'
     # data_path = 'D:/datasets/BIPED/*'
     file_names = zip(glob.glob(f'{data_path}/images/*.*'), glob.glob(f'{data_path}/edges_0/*.*'), glob.glob(f'{data_path}/edges_1/*.*'), glob.glob(f'{data_path}/edges_2/*.*'))
     avg_scores = []

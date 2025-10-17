@@ -28,11 +28,11 @@ from models.discriminator import Discriminator
 
 
 def test():
-    model = UNet.load_from_checkpoint('./checkpoints/unet/vgg/vanilla/best.ckpt', strict=False).eval().cuda()
+    model = UNet.load_from_checkpoint('./checkpoints/unet/convnext/vanilla/best.ckpt', strict=False).eval().cuda()
 
-    # data_path = 'D:/datasets/anime/train/yae_miko/images'
+    data_path = 'D:/datasets/anime/train/yae_miko/images'
     # data_path = 'D:/datasets/BIPED/val/images'
-    data_path = '../BSDS500/images/test'
+    # data_path = '../BSDS500/images/test'
     file_names = glob.glob(f'{data_path}/*.*')
     gs = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     j = 0

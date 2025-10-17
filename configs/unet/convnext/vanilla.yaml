@@ -13,12 +13,12 @@ module:
         l1_weight: 1.0
         lpieps_ckpt: './checkpoints/lpieps/convnext/best-v1.ckpt'
         lpieps_start_step: 1e3
-        ema_decay: 0.5
-        ema_lpieps_lv0: 0.4188
-        ema_lpieps_lv2: 0.9916
+        ema_decay: 0.99
+        ema_lpieps_lv0: 0.2671
+        ema_lpieps_lv2: 0.4973
         lpieps_lv0_weight: 1.0
-        lpieps_lv1_weight: 1.0
-        lpieps_lv2_weight: 0.5
+        lpieps_lv1_weight: 1.5
+        lpieps_lv2_weight: 1.0
 
     in_channels: 3
     embed_dim: 32

@@ -6,18 +6,19 @@ module:
     lr_decay_epoch: 100
     use_fp16: False
     log_interval: 50
-    target: losses.l1lpips.L1LPIPS
-    params:
-      lpips_weight: 1.0
-      l1_weight: 1.0
-      lpieps_ckpt: './checkpoints/lpieps/convnext/best-v1.ckpt'
-      lpieps_start_step: 1e3
-      ema_decay: 0.5
-      ema_lpieps_lv0: 0.4188
-      ema_lpieps_lv2: 0.9916
-      lpieps_lv0_weight: 1.0
-      lpieps_lv1_weight: 1.0
-      lpieps_lv2_weight: 0.5
+    loss_config:
+      target: losses.l1lpips.L1LPIPS
+      params:
+        lpips_weight: 1.0
+        l1_weight: 1.0
+        lpieps_ckpt: './checkpoints/lpieps/convnext/best-v1.ckpt'
+        lpieps_start_step: 1e3
+        ema_decay: 0.5
+        ema_lpieps_lv0: 0.4188
+        ema_lpieps_lv2: 0.9916
+        lpieps_lv0_weight: 1.0
+        lpieps_lv1_weight: 1.0
+        lpieps_lv2_weight: 0.5
 
     in_channels: 3
     embed_dim: 32

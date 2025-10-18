@@ -35,8 +35,7 @@ class Model(pl.LightningModule, ABC):
 
         if loss_config is not None:
             self.loss: Loss = instantiate_from_config(loss_config)
-            # for param in self.loss.parameters():
-            #     param.requires_grad = False
+
         else:
             self.loss = None
 

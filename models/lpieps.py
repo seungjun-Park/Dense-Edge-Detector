@@ -127,6 +127,17 @@ class LPIEPS(Model):
 
         return loss
 
+    def optimizer_step(
+        self,
+        epoch: int,
+        batch_idx: int,
+        optimizer: Union[Optimizer, LightningOptimizer],
+        optimizer_closure: Optional[Callable[[], Any]] = None,
+    ) -> None:
+        super().optimizer_step(epoch, batch_idx, optimizer, optimizer_closure)
+
+        for param in self.lins.parameters():
+            param.data.clamp_(min=0)
 
 class ScalingLayer(nn.Module):
     def __init__(self):

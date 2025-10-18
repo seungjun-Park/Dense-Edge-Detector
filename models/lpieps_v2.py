@@ -114,21 +114,35 @@ class LPIEPSV2(Model):
         d0 = self(imgs, edges_0)
         d1 = self(imgs, edges_1)
 
-        loss = self.loss(d0, d1, labels)
-        split = 'train' if self.training else 'valid'
-        self.log(f'{split}/loss', loss, prog_bar=True)
-        d_high = torch.zeros_like(d0)
+        d_high = torch.zeros_like(d0).to(d0.device)
         d_high[labels == 0.0] = d0[labels == 0.0]
         d_high[labels == 1.0] = d1[labels == 1.0]
 
-        d_low = torch.zeros_like(d0)
+        d_low = torch.zeros_like(d0).to(d0.device)
         d_low[labels != 1.0] = d1[labels != 1.0]
         d_low[labels != 0.0] = d0[labels != 0.0]
+
+        loss = self.loss(d0, d1, labels) + F.mse_loss(d_high, 0)
+
+        split = 'train' if self.training else 'valid'
+        self.log(f'{split}/loss', loss, prog_bar=True)
 
         self.log(f'{split}/d_high', d_high.mean(), prog_bar=True)
         self.log(f'{split}/d_low', d_low.mean(), prog_bar=True)
 
         return loss
+
+    def optimizer_step(
+            self,
+            epoch: int,
+            batch_idx: int,
+            optimizer: Union[Optimizer, LightningOptimizer],
+            optimizer_closure: Optional[Callable[[], Any]] = None,
+    ) -> None:
+        super().optimizer_step(epoch, batch_idx, optimizer, optimizer_closure)
+
+        for param in self.lins.parameters():
+            param.data.clamp_(min=0)
 
 
 class ScalingLayer(nn.Module):
@@ -166,15 +180,13 @@ class Moderator(nn.Module):
 
         if net_type == 'vgg':
             make_activation = torch.nn.ReLU(inplace=True)
-            make_norm = torch.nn.BatchNorm2d(in_channels * 4)
         else:
             make_activation = torch.nn.GELU()
-            make_norm = torch.nn.GroupNorm(1, in_channels * 4)
 
         self.layers = nn.Sequential(
-            nn.Conv2d(in_channels, in_channels * 4, kernel_size=1),
+            nn.Conv2d(in_channels, in_channels, kernel_size=1),
             make_activation,
-            nn.Conv2d(in_channels * 4, in_channels, kernel_size=1)
+            nn.Conv2d(in_channels, in_channels, kernel_size=1)
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

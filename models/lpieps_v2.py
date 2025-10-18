@@ -47,10 +47,14 @@ class LPIEPSV2(Model):
             self.chns = [96, 192, 384, 768]
 
         self.scaling_layer = ScalingLayer()
+        self.lins = nn.ModuleList()
         self.moderators_imgs = nn.ModuleList()
         self.moderators_edges = nn.ModuleList()
 
         for i in range(len(self.chns)):
+            self.lins.append(
+                NetLinLayer(self.chns[i], use_dropout=use_dropout)
+            )
             self.moderators_imgs.append(
                 Moderator(self.chns[i], net_type)
             )
@@ -97,8 +101,7 @@ class LPIEPSV2(Model):
             feat_imgs = self.moderators_imgs[i](feats_imgs[i])
             feat_edges = self.moderators_edges[i](feats_edges[i])
             diff = (normalize_tensor(feat_imgs) - normalize_tensor(feat_edges)) ** 2
-            # res = spatial_average(self.lins[i](diff), keepdim=True)
-            res = spatial_average(diff.sum(dim=1, keepdim=True), keepdim=True)
+            res = spatial_average(self.lins[i](diff), keepdim=True)
 
             val += res
 
@@ -162,7 +165,7 @@ class Moderator(nn.Module):
         super().__init__()
 
         if net_type == 'vgg':
-            make_activation = torch.nn.LeakyReLU(0.2)
+            make_activation = torch.nn.ReLU(inplace=True)
             make_norm = torch.nn.BatchNorm2d(in_channels * 4)
         else:
             make_activation = torch.nn.GELU()

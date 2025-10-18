@@ -122,7 +122,7 @@ class LPIEPSV2(Model):
         d_low[labels != 1.0] = d1[labels != 1.0]
         d_low[labels != 0.0] = d0[labels != 0.0]
 
-        loss = self.loss(d0, d1, labels) + F.mse_loss(d_high, 0)
+        loss = self.loss(d0, d1, labels) + F.mse_loss(d_high, torch.zeros_like(d_high).to(d_high.device))
 
         split = 'train' if self.training else 'valid'
         self.log(f'{split}/loss', loss, prog_bar=True)

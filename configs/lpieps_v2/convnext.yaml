@@ -39,7 +39,7 @@ logger:
   target: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
   params:
     save_dir: './logs'
-    name: 'lpieps'
+    name: 'lpieps_v2'
     version: 'convnext'
 
 
@@ -47,7 +47,7 @@ checkpoints:
   latest_checkpoints:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/lpieps/convnext'
+      dirpath: './checkpoints/lpieps_v2/convnext'
       filename: 'last'
       monitor: 'step'
       mode: 'max'
@@ -56,7 +56,7 @@ checkpoints:
   best_checkpoint:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/lpieps/convnext'
+      dirpath: './checkpoints/lpieps_v2/convnext'
       filename: 'best'
       monitor: 'valid/loss'
       mode: 'min'

@@ -114,7 +114,7 @@ class UNet(Model):
         )
 
         for i, mult in list(enumerate(channel_mult))[::-1]:
-            for j in range(num_blocks):
+            for j in range(num_blocks + 1):
                 self.decoder.append(
                     ResidualBlock(
                         in_channels=in_ch + skip_dims.pop(),

@@ -37,22 +37,28 @@ class LPIEPS(Model):
         assert self.net_type in ['vgg', 'convnext']
 
         if self.net_type == 'vgg':
-            self.net = VGG16().eval()
+            self.net_imgs = VGG16().eval()
+            self.net_edges = VGG16(requires_grad=True)
             self.chns = [64, 128, 256, 512, 512]
 
         elif self.net_type == 'convnext':
-            self.net = ConvNext().eval()
+            self.net_imgs = ConvNext().eval()
+            self.net_edges = ConvNext(requires_grad=True)
             self.chns = [96, 192, 384, 768]
 
         self.scaling_layer = ScalingLayer()
         self.lins = nn.ModuleList()
-        self.moderators = nn.ModuleList()
+        self.moderators_imgs = nn.ModuleList()
+        self.moderators_edges = nn.ModuleList()
 
         for i in range(len(self.chns)):
             self.lins.append(
                 NetLinLayer(self.chns[i], use_dropout=use_dropout)
             )
-            self.moderators.append(
+            self.moderators_imgs.append(
+                Moderator(self.chns[i])
+            )
+            self.moderators_edges.append(
                 Moderator(self.chns[i])
             )
 
@@ -79,11 +85,7 @@ class LPIEPS(Model):
 
         return feats_imgs, moderators, feats_edges
 
-    def forward(self, imgs: torch.Tensor, edges: torch.Tensor, normalize: bool = False) -> torch.Tensor:
-        if normalize:
-            imgs = 2 * imgs - 1
-            edges = 2 * edges - 1
-
+    def forward(self, imgs: torch.Tensor, edges: torch.Tensor) -> torch.Tensor:
         if edges.shape[1] == 1:
             edges = edges.repeat(1, 3, 1, 1)
 
@@ -92,17 +94,18 @@ class LPIEPS(Model):
         imgs = self.scaling_layer(imgs)
         edges = self.scaling_layer(edges)
 
-        feats_imgs = self.net(imgs)
-        feats_edges = self.net(edges)
+        feats_imgs = self.net_imgs(imgs)
+        feats_edges = self.net_edges(edges)
 
-        for i, (feat_imgs, feat_edges) in enumerate(zip(feats_imgs, feats_edges)):
-            feat_imgs = self.moderators[i](feat_imgs)
+        for i in range(len(feats_imgs)):
+            feat_imgs = self.moderators_imgs[i](feats_imgs[i])
+            feat_edges = self.moderators_edges[i](feats_edges[i])
             diff = (normalize_tensor(feat_imgs) - normalize_tensor(feat_edges)) ** 2
             res = spatial_average(self.lins[i](diff), keepdim=True)
 
             val += res
 
-        return F.sigmoid(val)
+        return val
 
 
     def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
@@ -111,16 +114,18 @@ class LPIEPS(Model):
         d0 = self(imgs, edges_0)
         d1 = self(imgs, edges_1)
 
-        loss = self.loss(d0, d1, labels)
-        split = 'train' if self.training else 'valid'
-        self.log(f'{split}/loss', loss, prog_bar=True)
-        d_high = torch.zeros_like(d0)
+        d_high = torch.zeros_like(d0).to(d0.device)
         d_high[labels == 0.0] = d0[labels == 0.0]
         d_high[labels == 1.0] = d1[labels == 1.0]
 
-        d_low = torch.zeros_like(d0)
+        d_low = torch.zeros_like(d0).to(d0.device)
         d_low[labels != 1.0] = d1[labels != 1.0]
         d_low[labels != 0.0] = d0[labels != 0.0]
+
+        loss = self.loss(d0, d1, labels)# + F.mse_loss(d_high, torch.zeros_like(d_high).to(d_high.device))
+
+        split = 'train' if self.training else 'valid'
+        self.log(f'{split}/loss', loss, prog_bar=True)
 
         self.log(f'{split}/d_high', d_high.mean(), prog_bar=True)
         self.log(f'{split}/d_low', d_low.mean(), prog_bar=True)
@@ -128,16 +133,17 @@ class LPIEPS(Model):
         return loss
 
     def optimizer_step(
-        self,
-        epoch: int,
-        batch_idx: int,
-        optimizer: Union[Optimizer, LightningOptimizer],
-        optimizer_closure: Optional[Callable[[], Any]] = None,
+            self,
+            epoch: int,
+            batch_idx: int,
+            optimizer: Union[Optimizer, LightningOptimizer],
+            optimizer_closure: Optional[Callable[[], Any]] = None,
     ) -> None:
         super().optimizer_step(epoch, batch_idx, optimizer, optimizer_closure)
 
         for param in self.lins.parameters():
             param.data.clamp_(min=0)
+
 
 class ScalingLayer(nn.Module):
     def __init__(self):
@@ -172,7 +178,10 @@ class Moderator(nn.Module):
         super().__init__()
 
         self.layers = nn.Sequential(
-            nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1),
+            nn.Conv2d(in_channels, in_channels, kernel_size=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels, in_channels, kernel_size=1),
+            nn.ReLU(inplace=True),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -218,7 +227,7 @@ class VGG16(torch.nn.Module):
 
 
 class ConvNext(nn.Module):
-    def __init__(self):
+    def __init__(self, requires_grad: bool = False):
         super().__init__()
 
         convnext_features = convnext_tiny(ConvNeXt_Tiny_Weights.IMAGENET1K_V1).features
@@ -228,8 +237,9 @@ class ConvNext(nn.Module):
         for i in range(4):
             self.slices.append(convnext_features[i * 2: i * 2 + 2])
 
-        for param in self.parameters():
-            param.requires_grad = False
+        if not requires_grad:
+            for param in self.parameters():
+                param.requires_grad = False
 
 
     def forward(self, x: torch.Tensor):

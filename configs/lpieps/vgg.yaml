@@ -20,8 +20,8 @@ data:
     train:
       target: datasets.anime_triplet.AnimeTripletDataset
       params:
-#        root: '/local_datasets/anime'
-        root: 'D:/datasets/anime'
+        root: '/local_datasets/anime'
+        # root: 'D:/datasets/anime'
         train: True
         size: [512, 512]
         scale: [ 0.9, 1.0 ]
@@ -29,8 +29,8 @@ data:
     validation:
       target: datasets.anime_triplet.AnimeTripletDataset
       params:
-#        root: '/local_datasets/anime'
-        root: 'D:/datasets/anime'
+        root: '/local_datasets/anime'
+        # root: 'D:/datasets/anime'
         train: False
         size: [512, 512]
         scale: [ 0.9, 1.0 ]
@@ -64,5 +64,5 @@ checkpoints:
 
 trainer:
   accelerator: 'gpu'
-  max_epochs: 50
-  # accumulate_grad_batches: 5
+  max_epochs: 100
+  accumulate_grad_batches: 5

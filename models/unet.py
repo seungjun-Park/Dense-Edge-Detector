@@ -96,13 +96,13 @@ class UNet(Model):
                 drop_path=drop_path,
                 num_groups=num_groups,
             ),
-            AttentionBlock(
-                channels=in_ch,
-                num_groups=num_groups,
-                num_heads=num_heads,
-                num_head_channels=num_head_channels,
-                use_checkpoint=use_checkpoint
-            ),
+            # AttentionBlock(
+            #     channels=in_ch,
+            #     num_groups=num_groups,
+            #     num_heads=num_heads,
+            #     num_head_channels=num_head_channels,
+            #     use_checkpoint=use_checkpoint
+            # ),
             ResidualBlock(
                 in_channels=in_ch,
                 embed_channels=granularity_embed_dim,
@@ -114,7 +114,7 @@ class UNet(Model):
         )
 
         for i, mult in list(enumerate(channel_mult))[::-1]:
-            for j in range(num_blocks + 1):
+            for j in range(num_blocks):
                 self.decoder.append(
                     ResidualBlock(
                         in_channels=in_ch + skip_dims.pop(),

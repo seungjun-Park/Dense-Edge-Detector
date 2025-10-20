@@ -48,18 +48,14 @@ class LPIEPS(Model):
 
         self.scaling_layer = ScalingLayer()
         self.lins = nn.ModuleList()
-        self.moderators_imgs = nn.ModuleList()
-        self.moderators_edges = nn.ModuleList()
+        self.moderators = nn.ModuleList()
 
         for i in range(len(self.chns)):
             self.lins.append(
                 NetLinLayer(self.chns[i], use_dropout=use_dropout)
             )
-            self.moderators_imgs.append(
-                Moderator(self.chns[i])
-            )
-            self.moderators_edges.append(
-                Moderator(self.chns[i])
+            self.moderators.append(
+                Moderator(self.chns[i], net_type=self.net_type)
             )
 
         self.save_hyperparameters(ignore=['loss_config'])
@@ -97,9 +93,8 @@ class LPIEPS(Model):
         feats_imgs = self.net_imgs(imgs)
         feats_edges = self.net_edges(edges)
 
-        for i in range(len(feats_imgs)):
-            feat_imgs = self.moderators_imgs[i](feats_imgs[i])
-            feat_edges = self.moderators_edges[i](feats_edges[i])
+        for i, (feat_imgs, feat_edges) in enumerate(zip(feats_imgs, feats_edges)):
+            feat_imgs = self.moderators[i](feat_imgs)
             diff = (normalize_tensor(feat_imgs) - normalize_tensor(feat_edges)) ** 2
             res = spatial_average(self.lins[i](diff), keepdim=True)
 
@@ -174,14 +169,22 @@ class NetLinLayer(nn.Module):
 class Moderator(nn.Module):
     def __init__(self,
                  in_channels: int,
+                 mlp_ratio: int = 4,
+                 dropout: float = 0.1,
+                 net_type: str = 'vgg',
                  ):
         super().__init__()
 
+        net_type = net_type.lower()
+        assert net_type in ['vgg', 'convnext']
+
         self.layers = nn.Sequential(
-            nn.Conv2d(in_channels, in_channels, kernel_size=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels, in_channels, kernel_size=1),
-            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels, int(in_channels * mlp_ratio), kernel_size=1),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Conv2d(int(in_channels * mlp_ratio), in_channels, kernel_size=1),
+            nn.ReLU() if net_type == 'vgg' else nn.Identity(),
+            nn.Dropout(dropout),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -235,7 +238,7 @@ class ConvNext(nn.Module):
         self.slices = nn.ModuleList()
 
         for i in range(4):
-            self.slices.append(convnext_features[i * 2: i * 2 + 2])
+            self.slices.append(nn.Sequential(*convnext_features[i * 2: i * 2 + 2]))
 
         if not requires_grad:
             for param in self.parameters():

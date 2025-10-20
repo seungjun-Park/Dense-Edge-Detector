@@ -71,8 +71,8 @@ class LPIEPS(Model):
         imgs = self.scaling_layer(imgs)
         edges = self.scaling_layer(edges)
 
-        feats_imgs = self.net(imgs)
-        feats_edges = self.net(edges)
+        feats_imgs = self.net_imgs(imgs)
+        feats_edges = self.net_edges(edges)
         moderators = []
 
         for i, (feat_imgs, feat_edges) in enumerate(zip(feats_imgs, feats_edges)):

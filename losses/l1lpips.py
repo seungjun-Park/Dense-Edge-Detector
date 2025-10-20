@@ -23,6 +23,7 @@ class L1LPIPS(Loss):
                  lpieps_lv0_weight: float = 1.0,
                  lpieps_lv1_weight: float = 1.0,
                  lpieps_lv2_weight: float = 1.0,
+                 max_lpieps: float = 1.5,
                  *args,
                  **kwargs
                  ):
@@ -32,6 +33,7 @@ class L1LPIPS(Loss):
         self.lpips_weight = lpips_weight
         self.l1_weight = l1_weight
         self.lpieps_start_step = lpieps_start_step
+        self.max_lpieps = max_lpieps
 
         self.ema_decay = ema_decay
 
@@ -78,9 +80,9 @@ class L1LPIPS(Loss):
         loss_lv_2 = self.get_l1lpips_loss(preds2, edges2)
 
         if global_step > self.lpieps_start_step:
-            lpieps_lv0 = torch.clamp(self.lpieps(imgs, preds0), max=1.2)
-            lpieps_lv1 = torch.clamp(self.lpieps(imgs, preds1), max=1.2)
-            lpieps_lv2 = torch.clamp(self.lpieps(imgs, preds2), max=1.2)
+            lpieps_lv0 = torch.clamp(self.lpieps(imgs, preds0), max=self.max_lpieps)
+            lpieps_lv1 = torch.clamp(self.lpieps(imgs, preds1), max=self.max_lpieps)
+            lpieps_lv2 = torch.clamp(self.lpieps(imgs, preds2), max=self.max_lpieps)
             with torch.no_grad():
                 self.ema_lpieps_lv0 = self.ema_decay * self.ema_lpieps_lv0 + (1 - self.ema_decay) * lpieps_lv0
                 self.ema_lpieps_lv2 = self.ema_decay * self.ema_lpieps_lv2 + (1 - self.ema_decay) * lpieps_lv2

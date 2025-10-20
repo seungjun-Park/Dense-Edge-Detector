@@ -183,7 +183,7 @@ class Moderator(nn.Module):
             nn.GELU(),
             nn.Dropout(dropout),
             nn.Conv2d(int(in_channels * mlp_ratio), in_channels, kernel_size=1),
-            nn.ReLU() if net_type == 'vgg' else nn.Identity(),
+            # nn.ReLU() if net_type == 'vgg' else nn.Identity(),
             nn.Dropout(dropout),
         )
 

@@ -102,7 +102,7 @@ class LPIEPSV2(Model):
         for i, (feat_imgs, feat_edges) in enumerate(zip(feats_imgs, feats_edges)):
             feat_imgs = self.moderators[i](feat_imgs)
             if self.moderator_requires_grad:
-                res = F.mse_loss(feat_imgs, feat_edges)
+                res = F.mse_loss(feat_imgs, feat_edges, reduction='none').mean(dim=[1, 2, 3], keepdim=True)
             else:
                 diff = (normalize_tensor(feat_imgs) - normalize_tensor(feat_edges)) ** 2
                 res = spatial_average(self.lins[i](diff), keepdim=True)
@@ -126,7 +126,7 @@ class LPIEPSV2(Model):
         d_low[labels != 1.0] = d1[labels != 1.0]
         d_low[labels != 0.0] = d0[labels != 0.0]
 
-        loss = self.loss(d0, d1, labels)
+        loss = self.loss(d0, d1, labels).mean()
 
         split = 'train' if self.training else 'valid'
         self.log(f'{split}/loss', loss, prog_bar=True)

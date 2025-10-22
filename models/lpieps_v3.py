@@ -77,7 +77,7 @@ class LPIEPSV3(Model):
         feat_imgs = self.net(imgs)
         feat_edges = self.net(edges)
 
-        diff = F.pairwise_distance(feat_imgs, feat_edges, p=2)
+        diff = F.pairwise_distance(feat_imgs, feat_edges, p=2, keepdim=True)
 
         return diff
 

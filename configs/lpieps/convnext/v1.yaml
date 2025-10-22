@@ -1,5 +1,5 @@
 module:
-  target: models.lpieps_v1.LPIEPSV1
+  target: models.lpieps.LPIEPS
   params:
     net_type: 'convnext'
     lr: 1e-4

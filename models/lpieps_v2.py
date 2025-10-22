@@ -24,10 +24,12 @@ def upsample(in_tens: torch.Tensor, out_HW: Tuple[int] = (64, 64)) -> torch.Tens
     return nn.Upsample(size=out_HW, mode='bilinear', align_corners=False)(in_tens)
 
 
-class LPIEPS(Model):
+class LPIEPSV2(Model):
     def __init__(self,
                  net_type: str = 'vgg',
                  use_dropout: bool = True,
+                 num_blocks: int = 1,
+                 moderator_requires_grad: bool = False,
                  *args,
                  **kwargs,
                  ):
@@ -46,13 +48,23 @@ class LPIEPS(Model):
 
         self.scaling_layer = ScalingLayer()
         self.lins = nn.ModuleList()
+        self.moderators = nn.ModuleList()
+
+        self.moderator_requires_grad = moderator_requires_grad
 
         for i in range(len(self.chns)):
-            self.lins.append(
-                NetLinLayer(self.chns[i], use_dropout=use_dropout)
+            self.moderators.append(
+                Moderator(self.chns[i], num_blocks=num_blocks, requires_grad=moderator_requires_grad)
             )
+            if not moderator_requires_grad:
+                self.lins.append(
+                    NetLinLayer(self.chns[i], use_dropout=use_dropout)
+                )
 
-        self.save_hyperparameters(ignore=['loss_config'])
+        if not moderator_requires_grad:
+            self.moderators = self.moderators.eval()
+
+        self.save_hyperparameters(ignore=['loss_config', 'moderator_requires_grad'])
 
     def _get_features(self, imgs: torch.Tensor, edges: torch.Tensor, normalize: bool = False) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         if normalize:
@@ -67,8 +79,13 @@ class LPIEPS(Model):
 
         feats_imgs = self.net(imgs)
         feats_edges = self.net(edges)
+        moderators = []
 
-        return feats_imgs, feats_edges
+        for i, (feat_imgs, feat_edges) in enumerate(zip(feats_imgs, feats_edges)):
+            feat_imgs = self.moderators[i](feat_imgs)
+            moderators.append(feat_imgs)
+
+        return feats_imgs, moderators, feats_edges
 
     def forward(self, imgs: torch.Tensor, edges: torch.Tensor) -> torch.Tensor:
         if edges.shape[1] == 1:
@@ -83,8 +100,12 @@ class LPIEPS(Model):
         feats_edges = self.net(edges)
 
         for i, (feat_imgs, feat_edges) in enumerate(zip(feats_imgs, feats_edges)):
-            diff = (normalize_tensor(feat_imgs) - normalize_tensor(feat_edges)) ** 2
-            res = spatial_average(self.lins[i](diff), keepdim=True)
+            feat_imgs = self.moderators[i](feat_imgs)
+            if self.moderator_requires_grad:
+                res = F.mse_loss(feat_imgs, feat_edges)
+            else:
+                diff = (normalize_tensor(feat_imgs) - normalize_tensor(feat_edges)) ** 2
+                res = spatial_average(self.lins[i](diff), keepdim=True)
 
             val += res
 
@@ -124,8 +145,9 @@ class LPIEPS(Model):
     ) -> None:
         super().optimizer_step(epoch, batch_idx, optimizer, optimizer_closure)
 
-        for param in self.lins.parameters():
-            param.data.clamp_(min=0)
+        if not self.moderator_requires_grad:
+            for param in self.lins.parameters():
+                param.data.clamp_(min=0)
 
 
 class ScalingLayer(nn.Module):
@@ -153,6 +175,49 @@ class NetLinLayer(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
 
+class Moderator(nn.Module):
+    def __init__(self,
+                 in_channels: int,
+                 mlp_ratio: int = 4,
+                 num_blocks: int = 1,
+                 requires_grad: bool = False,
+                 ):
+        super().__init__()
+
+        self.global_perceptive_field = nn.ModuleList()
+        self.local_perceptive_field = nn.ModuleList()
+
+        for i in range(num_blocks):
+            self.global_perceptive_field += [
+                    nn.Conv2d(in_channels, in_channels, kernel_size=7, padding=3, groups=in_channels),
+                    nn.GroupNorm(1, in_channels),
+                    nn.Conv2d(in_channels, int(mlp_ratio * in_channels), kernel_size=1),
+                    nn.GELU(),
+                    nn.Conv2d(int(in_channels * mlp_ratio), in_channels, kernel_size=1),
+                ]
+            self.local_perceptive_field += [
+                    nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1, groups=in_channels),
+                    nn.GroupNorm(1, in_channels),
+                    nn.Conv2d(in_channels, int(mlp_ratio * in_channels), kernel_size=1),
+                    nn.GELU(),
+                    nn.Conv2d(int(in_channels * mlp_ratio), in_channels, kernel_size=1),
+                ]
+
+        self.global_perceptive_field = nn.Sequential(*self.global_perceptive_field)
+        self.local_perceptive_field = nn.Sequential(*self.local_perceptive_field)
+
+        self.squeeze_block = nn.Sequential(
+            nn.Conv2d(in_channels * 2, in_channels, kernel_size=1, bias=False)
+        )
+
+        if not requires_grad:
+            for params in self.parameters():
+                params.requires_grad = False
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        global_feats = self.global_perceptive_field(x)
+        local_feats = self.local_perceptive_field(x)
+        return self.squeeze_block(torch.cat([global_feats, local_feats], dim=1))
 
 class VGG16(torch.nn.Module):
     def __init__(self, requires_grad=False, pretrained=True):

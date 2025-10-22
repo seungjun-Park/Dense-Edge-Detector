@@ -1,21 +1,23 @@
 module:
-  target: models.lpieps.LPIEPS
+  target: models.lpieps_v2.LPIEPSV2
   params:
     net_type: 'convnext'
+    num_blocks: 2
+    moderator_requires_grad: True
     lr: 1e-4
     weight_decay: 0.0
     lr_decay_epoch: 100
     log_interval: 50
     loss_config:
-      target: losses.bce_ranking_loss.BCERankingLoss
+      target: losses.triplet.TripletMarginLoss
       params:
-        chn_mid: 32
+        margin: 0.5
 
 data:
   target: datasets.util.DataModuleFromConfig
   params:
     num_workers: 4
-    batch_size: 2
+    batch_size: 1
     wrap: True
     train:
       target: datasets.anime_triplet.AnimeTripletDataset
@@ -24,7 +26,7 @@ data:
         # root: 'D:/datasets/anime'
         train: True
         size: [512, 512]
-        scale: [ 0.9, 1.0 ]
+        scale: [ 0.75, 1.0 ]
 
     validation:
       target: datasets.anime_triplet.AnimeTripletDataset
@@ -33,21 +35,21 @@ data:
         # root: 'D:/datasets/anime'
         train: False
         size: [512, 512]
-        scale: [ 0.9, 1.0 ]
+        scale: [ 0.75, 1.0 ]
 
 logger:
   target: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
   params:
     save_dir: './logs'
-    name: 'lpieps'
-    version: 'convnext'
+    name: 'lpieps/convnext'
+    version: 'v2'
 
 
 checkpoints:
   latest_checkpoints:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/lpieps/convnext'
+      dirpath: './checkpoints/lpieps/convnext/v2'
       filename: 'last'
       monitor: 'step'
       mode: 'max'
@@ -56,7 +58,7 @@ checkpoints:
   best_checkpoint:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/lpieps/convnext'
+      dirpath: './checkpoints/lpieps/convnext/v2'
       filename: 'best'
       monitor: 'valid/loss'
       mode: 'min'

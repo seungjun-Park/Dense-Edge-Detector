@@ -24,10 +24,10 @@ def upsample(in_tens: torch.Tensor, out_HW: Tuple[int] = (64, 64)) -> torch.Tens
     return nn.Upsample(size=out_HW, mode='bilinear', align_corners=False)(in_tens)
 
 
-class LPIEPS(Model):
+class LPIEPSV3(Model):
     def __init__(self,
                  net_type: str = 'vgg',
-                 use_dropout: bool = True,
+                 net_requires_grad: bool = False,
                  *args,
                  **kwargs,
                  ):
@@ -37,22 +37,19 @@ class LPIEPS(Model):
         assert self.net_type in ['vgg', 'convnext']
 
         if self.net_type == 'vgg':
-            self.net = VGG16().eval()
+            self.net = VGG16(requires_grad=net_requires_grad)
             self.chns = [64, 128, 256, 512, 512]
 
         elif self.net_type == 'convnext':
-            self.net = ConvNext().eval()
+            self.net = ConvNext(requires_grad=net_requires_grad)
             self.chns = [96, 192, 384, 768]
 
         self.scaling_layer = ScalingLayer()
-        self.lins = nn.ModuleList()
 
-        for i in range(len(self.chns)):
-            self.lins.append(
-                NetLinLayer(self.chns[i], use_dropout=use_dropout)
-            )
+        if not net_requires_grad:
+           self.net = self.net.eval()
 
-        self.save_hyperparameters(ignore=['loss_config'])
+        self.save_hyperparameters(ignore=['loss_config', 'net_requires_grad'])
 
     def _get_features(self, imgs: torch.Tensor, edges: torch.Tensor, normalize: bool = False) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         if normalize:
@@ -74,21 +71,15 @@ class LPIEPS(Model):
         if edges.shape[1] == 1:
             edges = edges.repeat(1, 3, 1, 1)
 
-        val = 0
-
         imgs = self.scaling_layer(imgs)
         edges = self.scaling_layer(edges)
 
-        feats_imgs = self.net(imgs)
-        feats_edges = self.net(edges)
+        feat_imgs = self.net(imgs)
+        feat_edges = self.net(edges)
 
-        for i, (feat_imgs, feat_edges) in enumerate(zip(feats_imgs, feats_edges)):
-            diff = (normalize_tensor(feat_imgs) - normalize_tensor(feat_edges)) ** 2
-            res = spatial_average(self.lins[i](diff), keepdim=True)
+        diff = F.pairwise_distance(feat_imgs, feat_edges, p=2)
 
-            val += res
-
-        return val
+        return diff
 
 
     def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
@@ -114,18 +105,6 @@ class LPIEPS(Model):
         self.log(f'{split}/d_low', d_low.mean(), prog_bar=True)
 
         return loss
-
-    def optimizer_step(
-            self,
-            epoch: int,
-            batch_idx: int,
-            optimizer: Union[Optimizer, LightningOptimizer],
-            optimizer_closure: Optional[Callable[[], Any]] = None,
-    ) -> None:
-        super().optimizer_step(epoch, batch_idx, optimizer, optimizer_closure)
-
-        for param in self.lins.parameters():
-            param.data.clamp_(min=0)
 
 
 class ScalingLayer(nn.Module):
@@ -155,65 +134,54 @@ class NetLinLayer(nn.Module):
 
 
 class VGG16(torch.nn.Module):
-    def __init__(self, requires_grad=False, pretrained=True):
+    def __init__(self, requires_grad=False, pretrained=True, dropout: float = 0.):
         super(VGG16, self).__init__()
-        vgg_pretrained_features = vgg16(pretrained=pretrained).features
-        self.slice1 = torch.nn.Sequential()
-        self.slice2 = torch.nn.Sequential()
-        self.slice3 = torch.nn.Sequential()
-        self.slice4 = torch.nn.Sequential()
-        self.slice5 = torch.nn.Sequential()
-        self.N_slices = 5
-        for x in range(4):
-            self.slice1.add_module(str(x), vgg_pretrained_features[x])
-        for x in range(4, 9):
-            self.slice2.add_module(str(x), vgg_pretrained_features[x])
-        for x in range(9, 16):
-            self.slice3.add_module(str(x), vgg_pretrained_features[x])
-        for x in range(16, 23):
-            self.slice4.add_module(str(x), vgg_pretrained_features[x])
-        for x in range(23, 30):
-            self.slice5.add_module(str(x), vgg_pretrained_features[x])
+        self.vgg_pretrained_features = vgg16(pretrained=pretrained).features
+
+        self.avgpool = nn.AdaptiveAvgPool2d((7, 7))
+        self.mlp = nn.Sequential(
+            nn.Linear(512 * 7 * 7, 4096),
+            nn.ReLU(True),
+            nn.Dropout(p=dropout),
+            nn.Linear(4096, 4096),
+        )
+
         if not requires_grad:
             for param in self.parameters():
                 param.requires_grad = False
 
-    def forward(self, X):
-        h = self.slice1(X)
-        h_relu1_2 = h
-        h = self.slice2(h)
-        h_relu2_2 = h
-        h = self.slice3(h)
-        h_relu3_3 = h
-        h = self.slice4(h)
-        h_relu4_3 = h
-        h = self.slice5(h)
-        h_relu5_3 = h
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.vgg_pretrained_features(x)
+        x = self.avgpool(x)
+        x = torch.flatten(x, start_dim=1)
+        x = self.mlp(x)
 
-        return [h_relu1_2, h_relu2_2, h_relu3_3, h_relu4_3, h_relu5_3]
+        return x
 
 
 class ConvNext(nn.Module):
-    def __init__(self, requires_grad: bool = False):
+    def __init__(self, requires_grad: bool = False, dropout: float = 0.,):
         super().__init__()
 
-        convnext_features = convnext_tiny(ConvNeXt_Tiny_Weights.IMAGENET1K_V1).features
+        self.convnext_features = convnext_tiny(ConvNeXt_Tiny_Weights.IMAGENET1K_V1).features
 
-        self.slices = nn.ModuleList()
-
-        for i in range(4):
-            self.slices.append(nn.Sequential(*convnext_features[i * 2: i * 2 + 2]))
+        self.avgpool = nn.AdaptiveAvgPool2d(1)
+        self.mlp = nn.Sequential(
+            nn.Linear(768, 384),
+            nn.ReLU(True),
+            nn.Dropout(p=dropout),
+            nn.Linear(384, 384),
+        )
 
         if not requires_grad:
             for param in self.parameters():
                 param.requires_grad = False
 
 
-    def forward(self, x: torch.Tensor):
-        feats = []
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.convnext_features(x)
+        x = self.avgpool(x)
+        x = torch.flatten(x, start_dim=1)
+        x = self.mlp(x)
 
-        for s in self.slices:
-            x = s(x)
-            feats.append(x)
-
-        return feats
+        return x

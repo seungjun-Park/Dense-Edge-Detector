@@ -38,7 +38,7 @@ class Adapter(nn.Module):
                     nn.GroupNorm(1, in_channels),
                     nn.Conv2d(in_channels, int(in_channels * 4), kernel_size=1),
                     nn.GELU(),
-                    nn.Conv2d(int(in_channels * 4), in_channels, kernel_size=1,)
+                    nn.Conv2d(int(in_channels * 4), in_channels, kernel_size=1)
                 )
             )
 

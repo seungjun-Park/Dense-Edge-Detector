@@ -4,6 +4,8 @@ import torch.nn.functional as F
 from typing import Tuple, Dict, Optional
 from losses.loss import Loss
 
+torch.nn.TripletMarginLoss
+
 
 class TripletMarginLoss(Loss):
     def __init__(self,

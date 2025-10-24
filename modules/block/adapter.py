@@ -10,16 +10,17 @@ class Adapter(nn.Module):
                  ):
         super().__init__()
 
-        self.layers = nn.ModuleList()
+        layers = []
+
 
         for i in range(num_blocks):
-            self.layers.append(
-                nn.Sequential(
-                    nn.Conv2d(in_channels, int(in_channels * 4), kernel_size=1),
-                    nn.ReLU(),
-                    nn.Conv2d(int(in_channels * 4), in_channels, kernel_size=1),
-                )
-            )
+            layers += [
+                nn.Conv2d(in_channels, int(in_channels * 4), kernel_size=1),
+                nn.ReLU(),
+                nn.Conv2d(int(in_channels * 4), in_channels, kernel_size=1),
+            ]
+
+        self.layers = nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.layer(x) + x

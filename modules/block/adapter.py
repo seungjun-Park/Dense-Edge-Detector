@@ -20,7 +20,7 @@ class Adapter(nn.Module):
                 nn.Conv2d(int(in_channels * 4), in_channels, kernel_size=1),
             ]
 
-        self.layers = nn.Sequential(*layers)
+        self.layer = nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.layer(x) + x

@@ -28,6 +28,7 @@ class LPIEPS(Model):
                  net_type: str = 'vgg',
                  use_dropout: bool = True,
                  adapter_ckpt_path: str = None,
+                 num_blocks: int = 1,
                  *args,
                  **kwargs,
                  ):
@@ -50,6 +51,14 @@ class LPIEPS(Model):
 
         self.train_adapter_only = False if adapter_ckpt_path else True
 
+        for i in range(len(self.chns)):
+            self.adapters.append(
+                Adapter(self.chns[i], num_blocks=num_blocks)
+            )
+            self.lins.append(
+                NetLinLayer(self.chns[i], use_dropout=use_dropout)
+            )
+
         if adapter_ckpt_path:
             sd = torch.load(adapter_ckpt_path, map_location="cpu")
             if "state_dict" in list(sd.keys()):
@@ -65,14 +74,6 @@ class LPIEPS(Model):
                 print(f"Missing Keys: {missing}")
             if len(unexpected) > 0:
                 print(f"Unexpected Keys: {unexpected}")
-
-        for i in range(len(self.chns)):
-            self.adapters.append(
-                Adapter(self.chns[i])
-            )
-            self.lins.append(
-                NetLinLayer(self.chns[i], use_dropout=use_dropout)
-            )
 
         self.save_hyperparameters(ignore=['loss_config'])
 

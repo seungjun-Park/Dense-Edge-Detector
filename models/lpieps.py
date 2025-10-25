@@ -136,8 +136,7 @@ class LPIEPS(Model):
         feats_edges = self.net(edges)
 
         for i, (feat_imgs, feat_edges) in enumerate(zip(feats_imgs, feats_edges)):
-            # feat_imgs = normalize_tensor(self.adapters[i](feat_imgs))
-            feat_imgs = normalize_tensor(feat_imgs)
+            feat_imgs = normalize_tensor(self.adapters[i](feat_imgs))
             feat_edges = normalize_tensor(feat_edges)
             diff = F.mse_loss(feat_imgs, feat_edges)
             loss += diff

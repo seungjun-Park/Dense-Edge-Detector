@@ -26,6 +26,7 @@ def upsample(in_tens: torch.Tensor, out_HW: Tuple[int] = (64, 64)) -> torch.Tens
 class LPIEPS(Model):
     def __init__(self,
                  net_type: str = 'vgg',
+                 block_type: str = 'mlp',
                  use_dropout: bool = True,
                  adapter_ckpt_path: str = None,
                  num_blocks: int = 1,
@@ -53,7 +54,7 @@ class LPIEPS(Model):
 
         for i in range(len(self.chns)):
             self.adapters.append(
-                Adapter(self.chns[i], num_blocks=num_blocks)
+                Adapter(self.chns[i], block_type=block_type, num_blocks=num_blocks)
             )
             self.lins.append(
                 NetLinLayer(self.chns[i], use_dropout=use_dropout)
@@ -135,7 +136,8 @@ class LPIEPS(Model):
         feats_edges = self.net(edges)
 
         for i, (feat_imgs, feat_edges) in enumerate(zip(feats_imgs, feats_edges)):
-            feat_imgs = normalize_tensor(self.adapters[i](feat_imgs))
+            # feat_imgs = normalize_tensor(self.adapters[i](feat_imgs))
+            feat_imgs = normalize_tensor(feat_imgs)
             feat_edges = normalize_tensor(feat_edges)
             diff = F.mse_loss(feat_imgs, feat_edges)
             loss += diff

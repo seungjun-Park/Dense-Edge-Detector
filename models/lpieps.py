@@ -26,7 +26,6 @@ def upsample(in_tens: torch.Tensor, out_HW: Tuple[int] = (64, 64)) -> torch.Tens
 class LPIEPS(Model):
     def __init__(self,
                  net_type: str = 'vgg',
-                 block_type: str = 'mlp',
                  use_dropout: bool = True,
                  adapter_ckpt_path: str = None,
                  num_blocks: int = 1,
@@ -54,7 +53,7 @@ class LPIEPS(Model):
 
         for i in range(len(self.chns)):
             self.adapters.append(
-                Adapter(self.chns[i], block_type=block_type, num_blocks=num_blocks)
+                Adapter(self.chns[i], num_blocks=num_blocks)
             )
             self.lins.append(
                 NetLinLayer(self.chns[i], use_dropout=use_dropout)
@@ -257,23 +256,27 @@ class ConvNext(nn.Module):
     def __init__(self, requires_grad: bool = False):
         super().__init__()
 
-        convnext_features = convnext_tiny(ConvNeXt_Tiny_Weights.IMAGENET1K_V1).features
+        self.convnext_features = convnext_tiny(ConvNeXt_Tiny_Weights.IMAGENET1K_V1).features
 
-        self.slices = nn.ModuleList()
-
-        for i in range(4):
-            self.slices.append(nn.Sequential(*convnext_features[i * 2: i * 2 + 2]))
+        self.features = []
 
         if not requires_grad:
             for param in self.parameters():
                 param.requires_grad = False
 
+        self.register_all_hooks()
+
+    def hook_fn(self, module, inputs, outputs):
+        self.features.append(outputs)
+
+    def register_all_hooks(self):
+        for i in range(4):
+            cn_block = self.convnext_features[i * 2 + 1][-1].block[4]
+            cn_block.register_forward_hook(self.hook_fn)
 
     def forward(self, x: torch.Tensor):
-        feats = []
+        self.features.clear()
 
-        for s in self.slices:
-            x = s(x)
-            feats.append(x)
+        _ = self.convnext_features(x)
 
-        return feats
+        return self.features

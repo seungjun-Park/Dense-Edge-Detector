@@ -36,7 +36,7 @@ logger:
   target: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
   params:
     save_dir: './logs'
-    name: 'lpieps/vgg/mlp'
+    name: 'lpieps/vgg'
     version: 'adapter_only_3'
 
 

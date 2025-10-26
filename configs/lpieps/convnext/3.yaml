@@ -16,7 +16,7 @@ data:
     batch_size: 2
     wrap: True
     train:
-      target: datasets.anime_level.AnimeTripletDataset
+      target: datasets.anime_triplet.AnimeTripletDataset
       params:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/anime'
@@ -25,7 +25,7 @@ data:
         scale: [ 0.75, 1.0 ]
 
     validation:
-      target: datasets.anime_level.AnimeTripletDataset
+      target: datasets.anime_triplet.AnimeTripletDataset
       params:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/anime'

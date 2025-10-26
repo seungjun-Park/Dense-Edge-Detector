@@ -268,7 +268,7 @@ class ConvNext(nn.Module):
         self.register_all_hooks()
 
     def hook_fn(self, module, inputs, outputs):
-        self.features.append(outputs)
+        self.features.append(outputs.permute(0, 3, 1, 2))
 
     def register_all_hooks(self):
         for i in range(4):

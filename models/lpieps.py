@@ -43,7 +43,8 @@ class LPIEPS(Model):
 
         elif self.net_type == 'convnext':
             self.net = ConvNext().eval()
-            self.chns = [96, 192, 384, 768]
+            # self.chns = [96, 192, 384, 768]
+            self.chns = [96 * 4, 192 * 4, 384 * 4, 768 * 4]
 
         self.scaling_layer = ScalingLayer()
         self.lins = nn.ModuleList()

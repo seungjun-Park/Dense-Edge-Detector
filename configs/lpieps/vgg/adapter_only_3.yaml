@@ -12,7 +12,7 @@ data:
   target: datasets.util.DataModuleFromConfig
   params:
     num_workers: 4
-    batch_size: 4
+    batch_size: 2
     wrap: True
     train:
       target: datasets.anime_level.AnimeLevelDataset

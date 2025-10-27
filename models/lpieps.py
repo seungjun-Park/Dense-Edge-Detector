@@ -76,6 +76,10 @@ class LPIEPS(Model):
             if len(unexpected) > 0:
                 print(f"Unexpected Keys: {unexpected}")
 
+            self.adapters = self.adapters.eval()
+            for param in self.adapters.parameters():
+                param.requires_grad = False
+
         self.save_hyperparameters(ignore=['loss_config'])
 
     def _get_features(self, imgs: torch.Tensor, edges: torch.Tensor, normalize: bool = False) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:

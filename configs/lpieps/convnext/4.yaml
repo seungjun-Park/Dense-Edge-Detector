@@ -2,7 +2,6 @@ module:
   target: models.lpieps.LPIEPS
   params:
     net_type: 'convnext'
-    adapter_ckpt_path: './checkpoints/lpieps/convnext/adapter_only_4/best.ckpt'
     lr: 1e-4
     weight_decay: 0.0
     lr_decay_epoch: 100
@@ -64,5 +63,5 @@ checkpoints:
 
 trainer:
   accelerator: 'gpu'
-  max_epochs: 50
+  max_epochs: 200
   accumulate_grad_batches: 1

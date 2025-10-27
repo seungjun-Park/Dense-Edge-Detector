@@ -27,7 +27,6 @@ class LPIEPS(Model):
     def __init__(self,
                  net_type: str = 'vgg',
                  use_dropout: bool = True,
-                 adapter_ckpt_path: str = None,
                  num_blocks: int = 1,
                  *args,
                  **kwargs,
@@ -50,8 +49,6 @@ class LPIEPS(Model):
         self.lins = nn.ModuleList()
         self.adapters = nn.ModuleList()
 
-        self.train_adapter_only = False if adapter_ckpt_path else True
-
         for i in range(len(self.chns)):
             self.adapters.append(
                 Adapter(self.chns[i], num_blocks=num_blocks)
@@ -59,26 +56,6 @@ class LPIEPS(Model):
             self.lins.append(
                 NetLinLayer(self.chns[i], use_dropout=use_dropout)
             )
-
-        if adapter_ckpt_path:
-            sd = torch.load(adapter_ckpt_path, map_location="cpu")
-            if "state_dict" in list(sd.keys()):
-                sd = sd["state_dict"]
-            adapters_sd = {}
-            for k, v in sd.items():
-                if k.startswith('adapters.'):
-                    adapters_sd[k[len('adapters.'):]] = v
-
-            missing, unexpected = self.adapters.load_state_dict(adapters_sd, strict=False)
-            print(f"Restored from {adapter_ckpt_path} with {len(missing)} missing and {len(unexpected)} unexpected keys")
-            if len(missing) > 0:
-                print(f"Missing Keys: {missing}")
-            if len(unexpected) > 0:
-                print(f"Unexpected Keys: {unexpected}")
-
-            self.adapters = self.adapters.eval()
-            for param in self.adapters.parameters():
-                param.requires_grad = False
 
         self.save_hyperparameters(ignore=['loss_config'])
 
@@ -124,33 +101,7 @@ class LPIEPS(Model):
 
         return val
 
-
-    def _step_adapter(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
-        imgs, edges = batch
-
-        if edges.shape[1] == 1:
-            edges = edges.repeat(1, 3, 1, 1)
-
-        loss = 0
-
-        imgs = self.scaling_layer(imgs)
-        edges = self.scaling_layer(edges)
-
-        feats_imgs = self.net(imgs)
-        feats_edges = self.net(edges)
-
-        for i, (feat_imgs, feat_edges) in enumerate(zip(feats_imgs, feats_edges)):
-            feat_imgs = normalize_tensor(self.adapters[i](feat_imgs))
-            feat_edges = normalize_tensor(feat_edges)
-            diff = F.mse_loss(feat_imgs, feat_edges)
-            loss += diff
-
-        split = 'train' if self.training else 'valid'
-        self.log(f'{split}/loss', loss, prog_bar=True)
-
-        return loss
-
-    def _step(self,batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx):
+    def step(self,batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx):
         imgs, edges_0, edges_1, labels = batch
 
         d0 = self(imgs, edges_0)
@@ -174,11 +125,6 @@ class LPIEPS(Model):
 
         return loss
 
-    def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
-        if self.train_adapter_only:
-            return self._step_adapter(batch, batch_idx)
-        else:
-            return self._step(batch, batch_idx)
 
     def optimizer_step(
             self,

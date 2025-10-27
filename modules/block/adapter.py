@@ -10,7 +10,6 @@ class Adapter(nn.Module):
                  in_channels: int,
                  net_type: str = 'vgg',
                  num_blocks: int = 1,
-                 dropout: float = 0.1,
                  ):
         super().__init__()
 
@@ -19,15 +18,15 @@ class Adapter(nn.Module):
         assert net_type in ['vgg', 'convnext']
 
         self.last_activation = nn.ReLU() if net_type == 'vgg' else nn.GELU()
+        mlp_ratio = 4 if net_type == 'vgg' else 2
 
         for i in range(num_blocks):
             self.layers.append(
                 nn.Sequential(
                     LayerNorm(in_channels, data_format='channels_first'),
-                    nn.Conv2d(in_channels, int(in_channels * 4), kernel_size=1),
+                    nn.Conv2d(in_channels, int(in_channels * mlp_ratio), kernel_size=1),
                     nn.GELU(),
-                    nn.Conv2d(int(in_channels * 4), in_channels, kernel_size=1),
-                    nn.Dropout(dropout)
+                    nn.Conv2d(int(in_channels * mlp_ratio), in_channels, kernel_size=1),
                 )
             )
 

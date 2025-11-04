@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+from thirdparty.convnext_v2 import LayerNorm
 
 class Adapter(nn.Module):
     def __init__(self,
@@ -22,6 +23,7 @@ class Adapter(nn.Module):
         for i in range(num_blocks):
             self.layers.append(
                 nn.Sequential(
+                    LayerNorm(in_channels, data_format='channels_first'),
                     nn.Conv2d(in_channels, int(in_channels * mlp_ratio), kernel_size=1),
                     nn.GELU(),
                     nn.Conv2d(int(in_channels * mlp_ratio), in_channels, kernel_size=1),

@@ -20,7 +20,7 @@ class Adapter(nn.Module):
 
         self.layer = nn.Sequential(
             nn.Conv2d(in_channels, in_channels, kernel_size=7, stride=1, padding=3, groups=in_channels),
-            LayerNorm(in_channels, eps=1e-6),
+            LayerNorm(in_channels, eps=1e-6, data_format='channels_first'),
             nn.Conv2d(in_channels, int(in_channels * mlp_ratio), kernel_size=1),
             nn.GELU(),
             GRN(int(in_channels * mlp_ratio)),

@@ -53,7 +53,7 @@ class LPIEPS(Model):
 
         for i in range(len(self.chns)):
             self.adapters.append(
-                Adapter(self.chns[i], num_blocks=num_blocks, net_type=net_type)
+                Adapter(self.chns[i], net_type=net_type)
             )
             self.lins.append(
                 NetLinLayer(self.chns[i], use_dropout=use_dropout)

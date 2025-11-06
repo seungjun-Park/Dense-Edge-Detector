@@ -62,6 +62,9 @@ class LPIEPS(Model):
         if adapters_ckpt_path:
             state_dict = torch.load(adapters_ckpt_path, map_location="cpu")["state_dict"]
             self.adapters.load_state_dict(state_dict, strict=False)
+            self.adapters = self.adapters.eval()
+            for param in self.adapters.parameters():
+                param.requires_grad = False
 
         self.save_hyperparameters(ignore=['loss_config'])
 
@@ -81,7 +84,7 @@ class LPIEPS(Model):
         moderators = []
 
         for i, (feat_imgs, feat_edges) in enumerate(zip(feats_imgs, feats_edges)):
-            feat_imgs = self.moderators[i](feat_imgs)
+            feat_imgs = self.adapters[i](feat_imgs)
             moderators.append(feat_imgs)
 
         return feats_imgs, moderators, feats_edges

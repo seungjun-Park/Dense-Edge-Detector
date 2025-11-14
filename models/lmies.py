@@ -7,7 +7,7 @@ from typing import List, Optional, Tuple, Any
 from omegaconf import DictConfig
 
 from models.model import Model
-from models.backbone import VGG16, ConvNext, ConvNeXtV2
+from models.backbone import VGG16, ConvNext, ConvNextV2
 
 
 class LMIES(Model):
@@ -26,12 +26,20 @@ class LMIES(Model):
     def configure(self):
         super().configure()
 
+        self.cfg.backbone = self.cfg.backbone.lower()
+        assert self.cfg.backbone in ['vgg', 'convnext', 'convnext_v2']
+
         if self.cfg.backbone == 'vgg':
             self.backbone_imgs = VGG16(use_adaptor=True)
             self.backbone_edges = VGG16().eval()
-        else:
+
+        elif self.cfg.backbone == 'convnext':
             self.backbone_imgs = ConvNext(use_adaptor=True)
             self.backbone_edges = ConvNext().eval()
+
+        else:
+            self.backbone_imgs = ConvNextV2(use_adaptor=True)
+            self.backbone_edges = ConvNextV2().eval()
 
     def forward(self, imgs: torch.Tensor, edges: torch.Tensor) -> torch.Tensor:
         if edges.shape[1] == 1:

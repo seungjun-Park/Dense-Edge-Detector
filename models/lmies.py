@@ -56,6 +56,7 @@ class LMIES(Model):
             loss += loss_lv
 
         loss_dict.update({f'{split}/loss': loss.clone().detach().mean()})
+        self.log_dict(loss_dict)
 
         return loss
 

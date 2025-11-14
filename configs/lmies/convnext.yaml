@@ -18,7 +18,7 @@ data:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/anime'
         train: True
-        size: [ 256, 256 ]
+        size: [ 384, 384 ]
         scale: [ 0.5, 1.0 ]
 
     validation:
@@ -27,7 +27,7 @@ data:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/anime'
         train: False
-        size: [ 256, 256 ]
+        size: [ 384, 384 ]
         scale: [ 0.5, 1.0 ]
 
 logger:

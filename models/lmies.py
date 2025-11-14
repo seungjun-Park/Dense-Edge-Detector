@@ -7,7 +7,7 @@ from typing import List, Optional, Tuple, Any
 from omegaconf import DictConfig
 
 from models.model import Model
-from models.backbone import VGG16, ConvNext
+from models.backbone import VGG16, ConvNext, ConvNeXtV2
 
 
 class LMIES(Model):

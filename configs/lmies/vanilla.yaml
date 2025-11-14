@@ -1,0 +1,68 @@
+module:
+  target: models.lmies.LMIES
+  params:
+    in_channels: 3
+    depths: [3, 3, 9, 3]
+    dims: [ 96, 192, 384, 768 ]
+    drop_path_ratio: 0.2
+    lr: 1e-4
+    weight_decay: 0.0
+    log_interval: 50
+    loss_config:
+      target: losses.lmies_loss.LMIESLoss
+
+data:
+  target: datasets.util.DataModuleFromConfig
+  params:
+    num_workers: 4
+    batch_size: 2
+    wrap: True
+    train:
+      target: datasets.anime.AnimeDataset
+      params:
+        root: '/local_datasets/anime'
+        # root: 'D:/datasets/anime'
+        train: True
+        size: [ 256, 256 ]
+        scale: [ 0.5, 1.0 ]
+
+    validation:
+      target: datasets.anime.AnimeDataset
+      params:
+        root: '/local_datasets/anime'
+        # root: 'D:/datasets/anime'
+        train: False
+        size: [ 256, 256 ]
+        scale: [ 0.5, 1.0 ]
+
+logger:
+  target: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
+  params:
+    save_dir: './logs'
+    name: 'lmies'
+    version: 'vanilla'
+
+
+checkpoints:
+  latest_checkpoints:
+    target: pytorch_lightning.callbacks.ModelCheckpoint
+    params:
+      dirpath: './checkpoints/lmies/vanilla'
+      filename: 'last'
+      monitor: 'step'
+      mode: 'max'
+      save_top_k: 1
+
+  best_checkpoint:
+    target: pytorch_lightning.callbacks.ModelCheckpoint
+    params:
+      dirpath: './checkpoints/lmies/vanilla'
+      filename: 'best'
+      monitor: 'valid/loss'
+      mode: 'min'
+      save_top_k: 1
+
+trainer:
+  accelerator: 'gpu'
+  max_epochs: 200
+  accumulate_grad_batches: 5

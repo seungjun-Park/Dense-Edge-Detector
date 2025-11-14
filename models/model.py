@@ -6,41 +6,49 @@ import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 from omegaconf import DictConfig
-from collections import abc
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 
 from typing import Union, List, Tuple, Any, Optional
+
+from pytorch_lightning.utilities.parsing import save_hyperparameters
+
 from utils import instantiate_from_config
 from losses.loss import Loss
 
 
 class Model(pl.LightningModule, ABC):
+    @dataclass
+    class Config:
+        lr: float
+        weight_decay: float
+        log_interval: int
+        loss_config: DictConfig
+
+        ckpt_path: str = None
+        ignore_keys: Union[List[str], Tuple[str]] = field(default_factory=tuple)
+
     def __init__(self,
-                 loss_config: DictConfig = None,
-                 lr: float = 2e-5,
-                 weight_decay: float = 1e-4,
-                 lr_decay_epoch: int = 100,
-                 log_interval: int = 100,
-                 ckpt_path: str = None,
-                 ignore_keys: Union[List[str], Tuple[str]] = (),
+                 params: DictConfig,
                  *args,
-                 **ignored_kwargs,
+                 **kwargs,
                  ):
         super().__init__()
+        self.cfg = self.Config(**params)
 
-        self.lr = lr
-        self.weight_decay = weight_decay
-        self.lr_decay_epoch = lr_decay_epoch
-        self.log_interval = log_interval
+        self.configure()
 
+        if self.cfg.ckpt_path is not None:
+            self.init_from_ckpt(path=self.cfg.ckpt_path, ignore_keys=self.cfg.ignore_keys)
+
+        self.save_hyperparameters()
+
+    def configure(self):
+        loss_config = self.cfg.loss_config
         if loss_config is not None:
-            self.loss: Loss = instantiate_from_config(loss_config)
-
+            self.loss_fn: Loss = instantiate_from_config(loss_config)
         else:
-            self.loss = None
-
-        if ckpt_path is not None:
-            self.init_from_ckpt(path=ckpt_path, ignore_keys=ignore_keys)
+            self.loss_fn = None
 
     def init_from_ckpt(self, path, ignore_keys=list()):
         state_dict = torch.load(path, map_location="cpu")["state_dict"]
@@ -73,8 +81,8 @@ class Model(pl.LightningModule, ABC):
     def configure_optimizers(self) -> Any:
         params = list(self.parameters())
         opt_net = torch.optim.AdamW(params,
-                                    lr=self.lr,
-                                    weight_decay=self.weight_decay,
+                                    lr=self.cfg.lr,
+                                    weight_decay=self.cfg.weight_decay,
                                     betas=(0.5, 0.9),
                                     )
 

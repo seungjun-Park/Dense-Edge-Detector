@@ -7,11 +7,11 @@ import torchvision.transforms as tf
 import torch.fft
 from collections import abc
 from functools import partial
+import pytorch_lightning as pl
 import math
 import warnings
 import cv2
 from itertools import repeat
-from typing import Union, List, Tuple
 
 import multiprocessing as mp
 from threading import Thread
@@ -19,61 +19,24 @@ from queue import Queue
 
 from inspect import isfunction
 from PIL import Image, ImageDraw, ImageFont
-from typing import List, Union, Dict, Set
-
-
-def ismap(x):
-    if not isinstance(x, torch.Tensor):
-        return False
-    return (len(x.shape) == 4) and (x.shape[1] > 3)
-
-
-def isimage(x):
-    if not isinstance(x, torch.Tensor):
-        return False
-    return (len(x.shape) == 4) and (x.shape[1] == 3 or x.shape[1] == 1)
-
-
-def exists(x):
-    return x is not None
-
-
-def default(val, d):
-    if exists(val):
-        return val
-    return d() if isfunction(d) else d
-
-
-def mean_flat(tensor):
-    """
-    https://github.com/openai/guided-diffusion/blob/27c20a8fab9cb472df5d6bdd6c8d11c8f430b924/guided_diffusion/nn.py#L86
-    Take the mean over all non-batch dimensions.
-    """
-    return tensor.mean(dim=list(range(1, len(tensor.shape))))
-
-
-def count_params(model, verbose=False):
-    total_params = sum(p.numel() for p in model.parameters())
-    if verbose:
-        print(f"{model.__class__.__name__} has {total_params * 1.e-6:.2f} M params.")
-    return total_params
+from typing import List, Union, Dict, Set, Tuple
 
 
 def instantiate_from_config(config):
     if not "target" in config:
-        if config == '__is_first_stage__':
-            return None
-        elif config == "__is_unconditional__":
-            return None
-        raise KeyError("Expected key `target` to instantiate.")
-    if 'params' in config:
-        module = get_obj_from_str(config["target"])(**config.get("params", dict()))
-    else:
-        module = get_obj_from_str(config['target'])()
+        raise KeyError("Expected key `target` to load model.")
 
-    if 'ckpt' in config:
-        ckpt = torch.load(config['ckpt'])['state_dict']
-        module.load_state_dict(ckpt, strict=False)
+    class_name = get_obj_from_str(config["target"])
+    if 'params' in config:
+        if hasattr(class_name, 'Config'):
+            module = class_name(config['params'])
+        else:
+            class_cfg = config.get('params', dict())
+            module = class_name(**class_cfg)
+
+    else:
+        module = class_name()
+
     return module
 
 
@@ -93,20 +56,6 @@ def load_model_from_config(config, sd):
     return model
 
 
-def load_model(config, ckpt, gpu=True, eval_mode=True):
-    if ckpt:
-        print(f"Loading model from {ckpt}")
-        pl_sd = torch.load(ckpt, map_location="cpu")
-        global_step = pl_sd["global_step"]
-    else:
-        pl_sd = {"state_dict": None}
-        global_step = None
-    model = load_model_from_config(config.module,
-                                   pl_sd["state_dict"])
-
-    return model, global_step
-
-
 True_set = ('yes', 'true', 't', 'y', '1')
 False_set = ('no', 'false', 'f', 'n', '0')
 
@@ -122,14 +71,6 @@ def str2bool(v):
         return None
     else:
         raise ValueError("Boolean value expected.")
-
-
-def to_flattened_numpy(x):
-    return x.detach().cpu().numpy().reshape((-1,))
-
-
-def from_flattened_numpy(x, shape):
-    return torch.from_numpy(x.reshape(shape))
 
 
 def _ntuple(n):
@@ -220,16 +161,6 @@ def trunc_normal_(tensor, mean=0., std=1., a=-2., b=2.):
         return _trunc_normal_(tensor, mean, std, a, b)
 
 
-def normalize_img(img):
-    assert img.ndim == 3
-    max_val = torch.max(img)
-    min_val = torch.min(img)
-
-    norm_x = (img - min_val) / (max_val - min_val)
-
-    return norm_x
-
-
 def zero_module(module):
     """
     Zero out the parameters of a module and return it.
@@ -237,41 +168,6 @@ def zero_module(module):
     for p in module.parameters():
         p.detach().zero_()
     return module
-
-
-def to_rgb(inp: torch.Tensor, color_space: str):
-    color_space = color_space.lower()
-    if color_space == 'rgb':
-        return inp
-    elif color_space == 'bgr':
-        color_space = cv2.COLOR_BGR2RGB
-    elif color_space == 'rgba':
-        color_space = cv2.COLOR_RGBA2RGB
-    elif color_space == 'gray':
-        color_space = cv2.COLOR_GRAY2RGB
-    elif color_space == 'xyz':
-        color_space = cv2.COLOR_XYZ2RGB
-    elif color_space == 'ycrcb':
-        color_space = cv2.COLOR_YCrCb2RGB
-    elif color_space == 'hsv':
-        color_space = cv2.COLOR_HSV2RGB
-    elif color_space == 'lab':
-        color_space = cv2.COLOR_LAB2RGB
-    elif color_space == 'luv':
-        color_space = cv2.COLOR_LUV2RGB
-    elif color_space == 'hls':
-        color_space = cv2.COLOR_HLS2RGB
-    elif color_space == 'yuv':
-        color_space = cv2.COLOR_YUV2RGB
-
-    assert inp.ndim == 3
-
-    inp = tf.ToPILImage()(inp)
-    inp = np.array(inp)
-    inp = cv2.cvtColor(inp, color_space)
-    inp = tf.ToTensor()(inp)
-
-    return inp
 
 
 def adopt_weight(weight, global_step, threshold=0, value=0.):

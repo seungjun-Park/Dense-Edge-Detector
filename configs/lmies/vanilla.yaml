@@ -58,7 +58,7 @@ checkpoints:
     params:
       dirpath: './checkpoints/lmies/vanilla'
       filename: 'best'
-      monitor: 'valid/loss'
+      monitor: 'valid/total_loss'
       mode: 'min'
       save_top_k: 1
 

@@ -23,7 +23,7 @@ class Model(pl.LightningModule, ABC):
         lr: float
         weight_decay: float
         log_interval: int
-        loss_config: DictConfig
+        loss_config: DictConfig = None
 
         ckpt_path: str = None
         ignore_keys: Union[List[str], Tuple[str]] = field(default_factory=tuple)

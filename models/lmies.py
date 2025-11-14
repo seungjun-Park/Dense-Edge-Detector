@@ -6,7 +6,6 @@ from typing import List, Optional, Tuple, Any
 
 from omegaconf import DictConfig
 
-from datasets.hugging_face import split
 from models.model import Model
 from models.backbone import VGG16, ConvNext
 

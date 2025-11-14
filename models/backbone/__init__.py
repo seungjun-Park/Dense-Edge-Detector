@@ -104,7 +104,9 @@ class ConvNextV2(nn.Module):
                  ):
         super().__init__()
 
-        net = ConvNeXtV2().load_state_dict(torch.load('models/backbone/convnextv2_tiny_22k_384_ema.pt', map_location=torch.device('cpu')), strict=False)
+        net = ConvNeXtV2()
+        net.load_state_dict(torch.load('models/backbone/convnextv2_tiny_22k_384_ema.pt', map_location=torch.device('cpu')), strict=False)
+
         net_stages = net.stages
         net_downsample_layers = net.downsample_layers
 

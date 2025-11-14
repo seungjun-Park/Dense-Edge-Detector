@@ -114,7 +114,7 @@ class ConvNextV2(nn.Module):
 
         self.slices = nn.ModuleList()
         for i in range(4):
-            self.slices.append(nn.Sequential(net_downsample_layers[i], net_stages[i]))
+            self.slices.append(nn.Sequential(*net_downsample_layers[i], *net_stages[i]))
 
         if not requires_grad:
             for param in self.parameters():

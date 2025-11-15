@@ -57,7 +57,7 @@ class LPIEPG(Model):
             self.img_enc = VGG16().eval()
             for p in self.img_enc.parameters():
                 p.requires_grad = False
-            self.edge_enc = VGG16().features
+            self.edge_enc = VGG16()
 
             self.img_mlp = nn.Sequential(
                 nn.Conv2d(512, 2048, kernel_size=1),
@@ -125,6 +125,8 @@ class LPIEPG(Model):
 
     def forward(self, imgs: torch.Tensor, edges: torch.Tensor) -> torch.Tensor:
         imgs = self.scaling_layer(imgs)
+        if edges.shape[1] == 1:
+            edges = edges.repeat(1, 3, 1, 1)
 
         z_imgs = self.img_mlp(self.img_enc(imgs))
         z_edges = self.edge_mlp(self.edge_enc(edges))

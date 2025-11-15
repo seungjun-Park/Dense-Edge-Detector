@@ -30,6 +30,7 @@ class AnimeTripletDataset(Dataset):
         super().__init__()
 
         self.to_tensor = transforms.ToTensor()
+        self.normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
 
         self.size = list(to_2tuple(size))
         self.scale = list(to_2tuple(scale))
@@ -56,12 +57,17 @@ class AnimeTripletDataset(Dataset):
         img = cv2.imread(f'{img_name}', cv2.IMREAD_COLOR)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-        pair = self.pairs[random.randint(0, 2)]
+        i = random.randint(0, 2)
+        pair = self.pairs[i]
+        if i == 1:
+            margin = 1.0
+        else:
+            margin = 0.5
 
         edge_0 = cv2.imread(f'{path}/edges_{pair[0]}/{name}', cv2.IMREAD_GRAYSCALE)
         edge_1 = cv2.imread(f'{path}/edges_{pair[1]}/{name}', cv2.IMREAD_GRAYSCALE)
 
-        img = self.to_tensor(img)
+        img = self.normalize(self.to_tensor(img))
         edge_0 = self.to_tensor(edge_0)
         edge_1 = self.to_tensor(edge_1)
 
@@ -82,14 +88,7 @@ class AnimeTripletDataset(Dataset):
             edge_0 = self.horizontal_flip(edge_0)
             edge_1 = self.horizontal_flip(edge_1)
 
-        if random.random() < 0.5:
-            labels = torch.tensor([0.0])
-
-        else:
-            edge_0, edge_1 = edge_1, edge_0
-            labels = torch.tensor([1.0])
-
-        return img, edge_0, edge_1, labels
+        return img, edge_0, edge_1, margin
 
 
     def __len__(self):

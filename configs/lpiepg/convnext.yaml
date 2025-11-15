@@ -1,10 +1,13 @@
 module:
   target: models.lmies.LMIES
   params:
-    backbone: 'vgg'
+    backbone: 'convnext'
     lr: 2e-5
     weight_decay: 0.0
     log_interval: 50
+    loss_config:
+      target: losses.triplet.TripletMarginLoss
+
 
 data:
   target: datasets.util.DataModuleFromConfig
@@ -13,7 +16,7 @@ data:
     batch_size: 2
     wrap: True
     train:
-      target: datasets.anime.AnimeDataset
+      target: datasets.anime_triplet.AnimeTripletDataset
       params:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/anime'
@@ -22,7 +25,7 @@ data:
         scale: [ 0.5, 1.0 ]
 
     validation:
-      target: datasets.anime.AnimeDataset
+      target: datasets.anime_triplet.AnimeTripletDataset
       params:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/anime'
@@ -34,15 +37,15 @@ logger:
   target: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
   params:
     save_dir: './logs'
-    name: 'lmies'
-    version: 'vgg'
+    name: 'lpiepg'
+    version: 'convnext'
 
 
 checkpoints:
   latest_checkpoints:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/lmies/vgg'
+      dirpath: './checkpoints/lpiepg/convnext'
       filename: 'last'
       monitor: 'step'
       mode: 'max'
@@ -51,7 +54,7 @@ checkpoints:
   best_checkpoint:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/lmies/vgg'
+      dirpath: './checkpoints/lpiepg/convnext'
       filename: 'best'
       monitor: 'valid/loss'
       mode: 'min'
@@ -59,5 +62,5 @@ checkpoints:
 
 trainer:
   accelerator: 'gpu'
-  max_epochs: 400
+  max_epochs: 200
   accumulate_grad_batches: 5

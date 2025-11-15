@@ -83,7 +83,7 @@ class AnimeDataset(Dataset):
             edge1 = self.horizontal_flip(edge1)
             edge2 = self.horizontal_flip(edge2)
 
-        return img, edge0, edge1, edge2
+        return img, (edge0, edge1, edge2)
 
     def __len__(self):
         return len(self.img_names)

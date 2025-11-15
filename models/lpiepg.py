@@ -71,7 +71,7 @@ class LPIEPG(Model):
                 nn.Conv2d(2048, 512, kernel_size=1)
             )
 
-        elif self.net_type == 'convnext':
+        elif self.cfg.backbone == 'convnext':
             self.img_enc = ConvNext().eval()
             for p in self.img_enc.parameters():
                 p.requires_grad = False

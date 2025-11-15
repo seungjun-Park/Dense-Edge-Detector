@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from omegaconf import DictConfig
 
 from models.model import Model
-from models.backbone import vgg16, convnext_tiny, ConvNeXtV2, VGG16_Weights, ConvNeXt_Tiny_Weights
+from models.backbone import VGG16, ConvNext, ConvNextV2
 from thirdparty.convnext_v2 import GRN
 
 
@@ -54,10 +54,10 @@ class LPIEPG(Model):
         assert self.cfg.backbone in ['vgg', 'convnext', 'convnext_v2']
 
         if self.cfg.backbone == 'vgg':
-            self.img_enc = vgg16(weights=VGG16_Weights).eval()
+            self.img_enc = VGG16().eval()
             for p in self.img_enc.parameters():
                 p.requires_grad = False
-            self.edge_enc = vgg16(weights=VGG16_Weights)
+            self.edge_enc = VGG16().features
 
             self.img_mlp = nn.Sequential(
                 nn.Conv2d(512, 2048, kernel_size=1),
@@ -72,10 +72,10 @@ class LPIEPG(Model):
             )
 
         elif self.net_type == 'convnext':
-            self.img_enc = convnext_tiny(weights=ConvNeXt_Tiny_Weights).eval()
+            self.img_enc = ConvNext().eval()
             for p in self.img_enc.parameters():
                 p.requires_grad = False
-            self.edge_enc = convnext_tiny(weights=ConvNeXt_Tiny_Weights)
+            self.edge_enc = ConvNext()
 
             self.img_mlp = nn.Sequential(
                 Permute((0, 2, 3, 1)),
@@ -96,12 +96,10 @@ class LPIEPG(Model):
             )
 
         else:
-            self.img_enc = ConvNeXtV2().eval()
-            self.img_enc.load_state_dict(torch.load('models/backbone/convnextv2_tiny_22k_384_ema.pt', map_location=torch.device('cpu')), strict=False)
+            self.img_enc = ConvNextV2().eval()
             for p in self.img_enc.parameters():
                 p.requires_grad = False
-            self.edge_enc = ConvNeXtV2()
-            self.edge_enc.load_state_dict(torch.load('models/backbone/convnextv2_tiny_22k_384_ema.pt', map_location=torch.device('cpu')), strict=False)
+            self.edge_enc = ConvNextV2()
 
             self.img_mlp = nn.Sequential(
                 Permute((0, 2, 3, 1)),

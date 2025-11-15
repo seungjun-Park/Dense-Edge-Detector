@@ -1,5 +1,5 @@
 module:
-  target: models.lmies.LMIES
+  target: models.lpiepg.LPIEPG
   params:
     backbone: 'convnext_v2'
     lr: 2e-5

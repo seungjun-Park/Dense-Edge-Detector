@@ -131,7 +131,7 @@ class LPIEPG(Model):
         z_imgs = self.img_mlp(self.img_enc(imgs))
         z_edges = self.edge_mlp(self.edge_enc(edges))
 
-        diff = (z_imgs - z_edges) ** 2
+        diff = ((z_imgs - z_edges) ** 2).mean(dim=[1, 2, 3])
 
         return diff
 

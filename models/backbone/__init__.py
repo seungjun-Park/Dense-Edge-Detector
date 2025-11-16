@@ -87,7 +87,7 @@ class ConvNext(nn.Module):
             if use_adaptor:
                 x = self.adaptors[i](x)
 
-        return self.adaptor_features_list if use_adaptor else self.features_list
+        return self.adaptor_features_list.copy() if use_adaptor else self.features_list.copy()
 
 class ConvNextV2(nn.Module):
     def __init__(self,
@@ -119,11 +119,11 @@ class ConvNextV2(nn.Module):
             self.slices[i][-1].grn.register_forward_hook(self.hook_fn)
             self.adaptors[i].grn.register_forward_hook(self.adaptor_hook_fn)
 
-    def adaptor_hook_fn(self, module, inputs, outputs):
-        self.adaptor_features_list.append(outputs.permute(0, 3, 1, 2))
-
     def hook_fn(self, module, inputs, outputs):
         self.features_list.append(outputs.permute(0, 3, 1, 2))
+
+    def adaptor_hook_fn(self, module, inputs, outputs):
+        self.adaptor_features_list.append(outputs.permute(0, 3, 1, 2))
 
     def forward(self, x: torch.Tensor, use_adaptor: bool = False) -> List[torch.Tensor]:
         self.features_list.clear()
@@ -134,4 +134,4 @@ class ConvNextV2(nn.Module):
             if use_adaptor:
                 x = self.adaptors[i](x)
 
-        return self.adaptor_features_list if use_adaptor else self.features_list
+        return self.adaptor_features_list.copy() if use_adaptor else self.features_list.copy()

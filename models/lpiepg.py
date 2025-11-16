@@ -92,6 +92,7 @@ class LPIEPG(Model):
         imgs, edges = batch
         if self.current_epoch < self.cfg.stage_2_start_epoch:
             return self._stage_1(imgs, edges[0])
+
         if self.current_epoch == self.cfg.stage_2_start_epoch:
             for p in self.backbone.adaptors.parameters():
                 p.requires_grad = False
@@ -122,7 +123,7 @@ class LPIEPG(Model):
         split = 'train' if self.training else 'valid'
 
         for i, (feat_imgs, feat_edges) in enumerate(zip(feats_imgs, feats_edges)):
-            loss_lv = (normalize_tensor(feat_imgs) - normalize_tensor(feat_edges) ** 2).mean(dim=[1, 2, 3])
+            loss_lv = F.mse_loss(normalize_tensor(feat_imgs), normalize_tensor(feat_edges))
             loss_log.update({f'{split}/loss_lv{i}': loss_lv})
             loss += loss_lv
 

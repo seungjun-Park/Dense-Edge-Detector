@@ -6,10 +6,10 @@ import torch.nn.functional as F
 from pytorch_lightning.core.optimizer import LightningOptimizer
 from dataclasses import dataclass, field
 from omegaconf import DictConfig
+import itertools, random
 
 from models.model import Model
 from models.backbone import VGG16, ConvNext, ConvNextV2
-from thirdparty.convnext_v2 import GRN
 
 
 def normalize_tensor(in_feat,eps=1e-10):
@@ -23,20 +23,13 @@ def upsample(in_tens: torch.Tensor, out_HW: Tuple[int] = (64, 64)) -> torch.Tens
     in_H, in_w = in_tens.shape[2], in_tens.shape[3]
     return nn.Upsample(size=out_HW, mode='bilinear', align_corners=False)(in_tens)
 
-class Permute(nn.Module):
-    def __init__(self,
-                 dims):
-        super().__init__()
-        self.dims = dims
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return x.permute(self.dims)
-
 
 class LPIEPG(Model):
     @dataclass
     class Config(Model.Config):
         backbone: str = 'vgg'
+        stage_2_start_epoch: int = 100
+        pairs: List = field(default_factory=list(itertools.combinations([0, 1, 2], 2)))
 
     cfg: Config
 
@@ -53,101 +46,101 @@ class LPIEPG(Model):
 
         assert self.cfg.backbone in ['vgg', 'convnext', 'convnext_v2']
 
+        self.scaling_layer = ScalingLayer()
+        self.lins = nn.ModuleList()
+
         if self.cfg.backbone == 'vgg':
-            self.img_enc = VGG16().eval()
-            for p in self.img_enc.parameters():
-                p.requires_grad = False
-            self.edge_enc = VGG16()
-
-            self.img_mlp = nn.Sequential(
-                nn.Conv2d(512, 2048, kernel_size=1),
-                nn.ReLU(inplace=True),
-                nn.Conv2d(2048, 512, kernel_size=1)
-            )
-
-            self.edge_mlp = nn.Sequential(
-                nn.Conv2d(512, 2048, kernel_size=1),
-                nn.ReLU(inplace=True),
-                nn.Conv2d(2048, 512, kernel_size=1)
-            )
+            self.backbone = VGG16()
+            for dim in [64, 128, 256, 512, 512]:
+                self.lins.append(
+                    NetLinLayer(dim, use_dropout=True)
+                )
 
         elif self.cfg.backbone == 'convnext':
-            self.img_enc = ConvNext().eval()
-            for p in self.img_enc.parameters():
-                p.requires_grad = False
-            self.edge_enc = ConvNext()
-
-            self.img_mlp = nn.Sequential(
-                Permute((0, 2, 3, 1)),
-                nn.LayerNorm(768, eps=1e-6),
-                nn.Linear(768, 768 * 4),
-                nn.GELU(),
-                nn.Linear(768 * 4, 512),
-                Permute((0, 3, 1, 2))
-            )
-
-            self.edge_mlp = nn.Sequential(
-                Permute((0, 2, 3, 1)),
-                nn.LayerNorm(768, eps=1e-6),
-                nn.Linear(768, 768 * 4),
-                nn.GELU(),
-                nn.Linear(768 * 4, 512),
-                Permute((0, 3, 1, 2))
-            )
+            self.backbone = ConvNext()
+            for dim in [96, 192, 384, 768]:
+                self.lins.append(
+                    NetLinLayer(dim, use_dropout=True)
+                )
 
         else:
-            self.img_enc = ConvNextV2().eval()
-            for p in self.img_enc.parameters():
-                p.requires_grad = False
-            self.edge_enc = ConvNextV2()
-
-            self.img_mlp = nn.Sequential(
-                Permute((0, 2, 3, 1)),
-                nn.LayerNorm(768, eps=1e-6),
-                nn.Linear(768, 768 * 4),
-                nn.GELU(),
-                GRN(768 * 4),
-                nn.Linear(768 * 4, 512),
-                Permute((0, 3, 1, 2))
-            )
-
-            self.edge_mlp = nn.Sequential(
-                Permute((0, 2, 3, 1)),
-                nn.LayerNorm(768, eps=1e-6),
-                nn.Linear(768, 768 * 4),
-                nn.GELU(),
-                GRN(768 * 4),
-                nn.Linear(768 * 4, 512),
-                Permute((0, 3, 1, 2))
-            )
-
-        self.scaling_layer = ScalingLayer()
+            self.backbone = ConvNextV2()
+            for dim in [96, 192, 384, 768]:
+                self.lins.append(
+                    NetLinLayer(dim, use_dropout=True)
+                )
 
     def forward(self, imgs: torch.Tensor, edges: torch.Tensor) -> torch.Tensor:
-        imgs = self.scaling_layer(imgs)
         if edges.shape[1] == 1:
             edges = edges.repeat(1, 3, 1, 1)
 
-        z_imgs = self.img_mlp(self.img_enc(imgs))
-        z_edges = self.edge_mlp(self.edge_enc(edges))
+        imgs = self.scaling_layer(imgs)
+        edges = self.scaling_layer(edges)
 
-        diff = ((z_imgs - z_edges) ** 2).mean(dim=[1, 2, 3])
+        feats_imgs = self.backbone(imgs, True)
+        feats_edges = self.backbone(edges)
 
-        return diff
+        val = 0
 
-    def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, float], batch_idx) -> Optional[torch.Tensor]:
-        imgs, edges_0, edges_1, margin = batch
+        for i, (feat_imgs, feat_edges) in enumerate(zip(feats_imgs, feats_edges)):
+            diff = (normalize_tensor(feat_imgs) - normalize_tensor(feat_edges)) ** 2
+            val += spatial_average(self.lins[i](diff), keepdim=True)
 
-        d0 = self(imgs, edges_0)
-        d1 = self(imgs, edges_1)
+        return val
 
-        loss = self.loss_fn(d0, d1, margin).mean()
+    def step(self, batch: Tuple[torch.Tensor, Tuple[torch.Tensor]], batch_idx) -> Optional[torch.Tensor]:
+        imgs, edges = batch
+        if self.current_epoch < self.cfg.stage_2_start_epoch:
+            return self._stage_1(imgs, edges[0])
+        if self.current_epoch == self.cfg.stage_2_start_epoch:
+            for p in self.backbone.adaptors.parameters():
+                p.requires_grad = False
+        idx = random.randint(0, 2)
+        pair = self.cfg.pairs[idx]
+
+        if idx == 1:
+            margin = 1.0
+        else:
+            margin = 0.5
+
+        edges_pos, edges_neg = edges[pair[0]], edges[pair[1]]
+
+        return self._stage_2(imgs, edges_pos, edges_neg, margin)
+
+    def _stage_1(self, imgs: torch.Tensor, edges: torch.Tensor) -> torch.Tensor:
+        if edges.shape[1] == 1:
+            edges = edges.repeat(1, 3, 1, 1)
+
+        imgs = self.scaling_layer(imgs)
+        edges = self.scaling_layer(edges)
+
+        feats_imgs = self.backbone(imgs, True)
+        feats_edges = self.backbone(edges)
+
+        loss = 0
+        loss_log = {}
+        split = 'train' if self.training else 'valid'
+
+        for i, (feat_imgs, feat_edges) in enumerate(zip(feats_imgs, feats_edges)):
+            loss_lv = (normalize_tensor(feat_imgs) - normalize_tensor(feat_edges) ** 2).mean(dim=[1, 2, 3])
+            loss_log.update({f'{split}/loss_lv{i}': loss_lv})
+            loss += loss_lv
+
+        loss_log.update({f'{split}/loss'})
+        self.log_dict(loss_log)
+
+        return loss
+
+    def _stage_2(self, imgs: torch.Tensor, edges_pos: torch.Tensor, edges_neg: torch.Tensor, margin: float) -> torch.Tensor:
+        d_pos = self(imgs, edges_pos)
+        d_neg = self(imgs, edges_neg)
+
+        loss = self.loss_fn(d_pos, d_neg, margin).mean()
 
         split = 'train' if self.training else 'valid'
         self.log(f'{split}/loss', loss, prog_bar=True)
 
         return loss
-
 
 class ScalingLayer(nn.Module):
     def __init__(self):
@@ -157,3 +150,12 @@ class ScalingLayer(nn.Module):
 
     def forward(self, inp: torch.Tensor) -> torch.Tensor:
         return (inp - self.shift) / self.scale
+
+
+class NetLinLayer(nn.Module):
+    """ A single linear layer which does a 1x1 conv """
+    def __init__(self, chn_in, chn_out=1, use_dropout=False):
+        super(NetLinLayer, self).__init__()
+        layers = [nn.Dropout(), ] if use_dropout else []
+        layers += [nn.Conv2d(chn_in, chn_out, 1, stride=1, padding=0, bias=False), ]
+        self.model = nn.Sequential(*layers)

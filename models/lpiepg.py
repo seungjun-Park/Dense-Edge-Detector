@@ -29,7 +29,7 @@ class LPIEPG(Model):
     class Config(Model.Config):
         backbone: str = 'vgg'
         stage_2_start_epoch: int = 100
-        pairs: List = field(default_factory=list(itertools.combinations([0, 1, 2], 2)))
+        pairs: List = field(default_factory=lambda: list(itertools.combinations([0, 1, 2], 2)))
 
     cfg: Config
 

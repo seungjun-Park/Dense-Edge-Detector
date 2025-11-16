@@ -126,7 +126,7 @@ class LPIEPG(Model):
             loss_log.update({f'{split}/loss_lv{i}': loss_lv})
             loss += loss_lv
 
-        loss_log.update({f'{split}/loss'})
+        loss_log.update({f'{split}/loss': loss})
         self.log_dict(loss_log)
 
         return loss

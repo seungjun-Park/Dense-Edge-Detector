@@ -72,6 +72,9 @@ class NetLinLayer(nn.Module):
         layers += [nn.Conv2d(chn_in, chn_out, 1, stride=1, padding=0, bias=False), ]
         self.model = nn.Sequential(*layers)
 
+    def forward(self, x: torch.Tensor) -> torch.TensorType:
+        return self.model(x)
+
 
 class vgg16(torch.nn.Module):
     def __init__(self, requires_grad=False, pretrained=True):

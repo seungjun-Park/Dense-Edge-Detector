@@ -160,3 +160,6 @@ class NetLinLayer(nn.Module):
         layers = [nn.Dropout(), ] if use_dropout else []
         layers += [nn.Conv2d(chn_in, chn_out, 1, stride=1, padding=0, bias=False), ]
         self.model = nn.Sequential(*layers)
+
+    def forward(self, x: torch.Tensor) -> torch.TensorType:
+        return self.model(x)

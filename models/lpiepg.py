@@ -60,14 +60,14 @@ class LPIEPG(Model):
             self.backbone = ConvNext()
             for dim in [96, 192, 384, 768]:
                 self.lins.append(
-                    NetLinLayer(dim, use_dropout=True)
+                    NetLinLayer(dim * 4, use_dropout=True)
                 )
 
         else:
             self.backbone = ConvNextV2()
             for dim in [96, 192, 384, 768]:
                 self.lins.append(
-                    NetLinLayer(dim, use_dropout=True)
+                    NetLinLayer(dim * 4, use_dropout=True)
                 )
 
     def forward(self, imgs: torch.Tensor, edges: torch.Tensor) -> torch.Tensor:
@@ -139,7 +139,7 @@ class LPIEPG(Model):
         loss = self.loss_fn(d_pos, d_neg, margin).mean()
 
         split = 'train' if self.training else 'valid'
-        self.log(f'{split}/loss', loss, prog_bar=True)
+        self.log(f'{split}/loss', loss)
 
         return loss
 

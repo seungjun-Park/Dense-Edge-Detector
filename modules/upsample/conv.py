@@ -4,7 +4,6 @@ import torch.nn.functional as F
 from typing import Union, List, Tuple, Type
 
 from modules.upsample import UpSample
-from modules.norm.layer_norm import LayerNorm
 
 
 class ConvUpSample(UpSample):

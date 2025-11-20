@@ -1,5 +1,5 @@
 module:
-  target: models.lpiepg.LPIEPG
+  target: models.gnet.GranularityNet
   params:
     backbone: 'vgg'
     lr: 2e-5
@@ -36,7 +36,7 @@ logger:
   target: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
   params:
     save_dir: './logs'
-    name: 'lpiepg'
+    name: 'gnet'
     version: 'vgg'
 
 
@@ -44,7 +44,7 @@ checkpoints:
   latest_checkpoints:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/lpiepg/vgg'
+      dirpath: './checkpoints/gnet/vgg'
       filename: 'last'
       monitor: 'step'
       mode: 'max'
@@ -53,7 +53,7 @@ checkpoints:
   best_checkpoint:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/lpiepg/vgg'
+      dirpath: './checkpoints/gnet/vgg'
       filename: 'best'
       monitor: 'valid/loss'
       mode: 'min'

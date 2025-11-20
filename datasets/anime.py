@@ -55,21 +55,24 @@ class AnimeDataset(Dataset):
         img = cv2.imread(f'{img_name}', cv2.IMREAD_COLOR)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-        edge0 = cv2.imread(f'{path}/edges_0/{name}', cv2.IMREAD_GRAYSCALE)
-        edge1 = cv2.imread(f'{path}/edges_1/{name}', cv2.IMREAD_GRAYSCALE)
-        edge2 = cv2.imread(f'{path}/edges_2/{name}', cv2.IMREAD_GRAYSCALE)
+        level = random.randint(0, 2)
+
+        if level == 0:
+            label = torch.tensor([1.0])
+        elif level == 1:
+            label = torch.tensor([0.5])
+        else:
+            label = torch.tensor([0.0])
+
+        edge = cv2.imread(f'{path}/edges_{level}/{name}', cv2.IMREAD_GRAYSCALE)
 
         img = self.to_tensor(img)
-        edge0 = self.to_tensor(edge0)
-        edge1 = self.to_tensor(edge1)
-        edge2 = self.to_tensor(edge2)
+        edge = self.to_tensor(edge)
 
         i, j, h, w = transforms.RandomResizedCrop.get_params(img, scale=self.scale, ratio=self.ratio)
 
         img = tf.resized_crop(img, i, j, h, w, size=self.size, antialias=True)
-        edge0 = tf.resized_crop(edge0, i, j, h, w, size=self.size, antialias=True)
-        edge1 = tf.resized_crop(edge1, i, j, h, w, size=self.size, antialias=True)
-        edge2 = tf.resized_crop(edge2, i, j, h, w, size=self.size, antialias=True)
+        edge = tf.resized_crop(edge, i, j, h, w, size=self.size, antialias=True)
 
         if random.random() < 0.5:
             if random.random() < 0.5:
@@ -79,11 +82,9 @@ class AnimeDataset(Dataset):
 
         if random.random() < 0.5:
             img = self.horizontal_flip(img)
-            edge0 = self.horizontal_flip(edge0)
-            edge1 = self.horizontal_flip(edge1)
-            edge2 = self.horizontal_flip(edge2)
+            edge = self.horizontal_flip(edge)
 
-        return img, (edge0, edge1, edge2)
+        return img, edge, label
 
     def __len__(self):
         return len(self.img_names)

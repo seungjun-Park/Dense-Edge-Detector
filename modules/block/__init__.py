@@ -3,7 +3,7 @@ import torch.nn as nn
 from abc import ABC, abstractmethod
 
 from utils.checkpoints import checkpoint
-from modules.norm.layer_norm import LayerNorm
+
 
 
 class Block(nn.Module, ABC):
@@ -21,10 +21,6 @@ class Block(nn.Module, ABC):
             nn.init.trunc_normal_(module.weight, std=0.02)
             if module.bias is not None:
                 nn.init.constant_(module.bias, 0)
-
-        elif isinstance(module, (nn.LayerNorm, LayerNorm)):
-            nn.init.constant_(module.bias, 0)
-            nn.init.constant_(module.weight, 1.0)
 
     def forward(self, *args, **kwargs) -> torch.Tensor:
         return checkpoint(self._forward, (*[x for x in args if x is not None ],), self.parameters(), flag=self.use_checkpoint)

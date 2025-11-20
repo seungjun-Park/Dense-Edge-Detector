@@ -30,7 +30,6 @@ class AnimeTripletDataset(Dataset):
         super().__init__()
 
         self.to_tensor = transforms.ToTensor()
-        self.normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
 
         self.size = list(to_2tuple(size))
         self.scale = list(to_2tuple(scale))
@@ -67,7 +66,7 @@ class AnimeTripletDataset(Dataset):
         edge_0 = cv2.imread(f'{path}/edges_{pair[0]}/{name}', cv2.IMREAD_GRAYSCALE)
         edge_1 = cv2.imread(f'{path}/edges_{pair[1]}/{name}', cv2.IMREAD_GRAYSCALE)
 
-        img = self.normalize(self.to_tensor(img))
+        img = self.to_tensor(img)
         edge_0 = self.to_tensor(edge_0)
         edge_1 = self.to_tensor(edge_1)
 

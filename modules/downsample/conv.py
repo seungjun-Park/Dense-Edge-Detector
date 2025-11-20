@@ -4,7 +4,6 @@ import torch.nn.functional as F
 from typing import Union, Tuple, List, Type, Dict
 
 from modules.downsample import DownSample
-from modules.norm.layer_norm import LayerNorm
 
 
 class ConvDownSample(DownSample):

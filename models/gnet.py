@@ -124,7 +124,7 @@ class GranularityNet(Model):
         # loss, loss_log = self.loss_fn(granularity, labels, split='train' if self.training else 'valid')
         # self.log_dict(loss_log)
 
-        loss = F.binary_cross_entropy(granularity, labels)
+        loss = F.mse_loss(granularity, labels)
         split = 'train' if self.training else 'valid'
         self.log(f'{split}/loss', loss)
 

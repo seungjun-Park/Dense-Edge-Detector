@@ -47,6 +47,7 @@ class GranularityNet(Model):
     @dataclass
     class Config(Model.Config):
         backbone: str = 'vgg'
+        dropout: float = 0.
         model_mapper: Dict = field(default_factory=lambda : {
             'vgg': 'vgg16_bn',
             'convnext': 'convnext_base',
@@ -71,19 +72,14 @@ class GranularityNet(Model):
 
         pretrained_weight_name = self.cfg.model_mapper[self.cfg.backbone]
         print(f"Build Model using Backbon: {pretrained_weight_name}.")
-        self.backbone_img = timm.create_model(
+        self.backbone = timm.create_model(
             pretrained_weight_name, pretrained=True, features_only=True,
         )
 
-        self.backbone_edge = timm.create_model(
-            pretrained_weight_name, pretrained=True, features_only=True,
-        )
+        for param in self.backbone.parameters():
+            param.requires_grad = False
 
-        for param_img, param_edge in zip(self.backbone_img.parameters(), self.backbone_edge.parameters()):
-            param_img.requires_grad = False
-            param_edge.requires_grad = False
-
-        feature_channels = self.backbone_img.feature_info.channels()
+        feature_channels = self.backbone.feature_info.channels()
 
         self.fusion_blocks = nn.ModuleList([
             FusionBlock(c) for c in feature_channels
@@ -93,7 +89,7 @@ class GranularityNet(Model):
         self.head = nn.Sequential(
             nn.Linear(total_dims, 512),
             nn.GELU(),
-            nn.Dropout(0.3),
+            nn.Dropout(self.cfg.dropout),
             nn.Linear(512, 1),
             nn.Sigmoid(),
         )
@@ -109,8 +105,8 @@ class GranularityNet(Model):
             imgs = self.normalize_imagenet(imgs)
             edges = self.normalize_imagenet(edges)
 
-        feats_imgs = self.backbone_img(imgs)
-        feats_edges = self.backbone_edge(edges)
+        feats_imgs = self.backbone(imgs)
+        feats_edges = self.backbone(edges)
 
         fused_feats = []
         for fusion_block, feat_imgs, feat_edges in zip(self.fusion_blocks, feats_imgs, feats_edges):

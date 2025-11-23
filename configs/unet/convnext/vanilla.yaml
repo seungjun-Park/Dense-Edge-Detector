@@ -9,29 +9,17 @@ module:
     loss_config:
       target: losses.l1lpips.L1LPIPS
       params:
+        gnet_ckpt: './checkpoints/gnet/convnext/best.ckpt'
         lpips_weight: 1.0
         l1_weight: 1.0
-        lpieps_ckpt: './checkpoints/lpieps/convnext/best.ckpt'
-        lpieps_start_step: 6e2
-        ema_decay: 0.99
-        ema_lpieps_lv0: 0.13
-        ema_lpieps_lv2: 1.5
-        lpieps_lv0_weight: 1.1
-        lpieps_lv1_weight: 1.5
-        lpieps_lv2_weight: 0.5
-        max_lpieps: 1.6
+        granularity_weight: 1.0
 
     in_channels: 3
     embed_dim: 32
     out_channels: 1
     channels_mult: [ 1, 2, 4, 8 ]
-    num_blocks: 2
-    num_groups: 8
-    num_heads: 8
-    num_head_channels: -1
-    drop_path: 0.1
-    activation: 'torch.nn.GELU'
-    mode: 'nearest'
+    num_blocks: [2, 2, 2, 2]
+    drop_path: 0.2
     use_checkpoint: True
 
 data:
@@ -87,6 +75,6 @@ checkpoints:
 
 trainer:
   accelerator: 'gpu'
-  max_epochs: 100
+  max_epochs: 200
   accumulate_grad_batches: 5
   # precision: 'bf16'

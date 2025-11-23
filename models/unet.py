@@ -50,7 +50,7 @@ class UNet(Model):
         )
 
         self.embed = nn.Sequential(
-            nn.Conv2d(self.cfg.in_channels, self.cfg.in_channels, kernel_size=7, padding=3, groups=in_channels, bias=False),
+            nn.Conv2d(self.cfg.in_channels, self.cfg.in_channels, kernel_size=7, padding=3, groups=self.cfg.in_channels, bias=False),
             nn.Conv2d(self.cfg.in_channels, self.cfg.embed_dim, kernel_size=1),
             LayerNorm2d(self.cfg.embed_dim),
         )

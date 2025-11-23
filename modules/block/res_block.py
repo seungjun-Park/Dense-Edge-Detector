@@ -41,8 +41,6 @@ class ResidualBlock(Block):
 
         if granularity is not None:
             granularity = self.embed(granularity).type(h.dtype)
-            while len(granularity.shape) < len(x.shape):
-                granularity = granularity[..., None]
             scale, shift = granularity.chunk(2, dim=1)
             h = h * (1 + scale) + shift
 

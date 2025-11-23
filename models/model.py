@@ -21,8 +21,8 @@ class Model(pl.LightningModule, ABC):
     @dataclass
     class Config:
         lr: float
-        weight_decay: float
         log_interval: int
+        weight_decay: float = 0.0
         loss_config: DictConfig = None
 
         ckpt_path: str = None

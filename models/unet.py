@@ -151,7 +151,7 @@ class UNet(Model):
     def forward(self, inputs: torch.Tensor, granularity: torch.Tensor = None) -> torch.Tensor:
         outputs = self.embed(inputs)
         if granularity is not None:
-            granularity = self.fourier_embedding(granularity, dim=self.embed_dim)
+            granularity = self.fourier_embedding(granularity, dim=self.cfg.embed_dim)
             granularity = self.granularity_embed(granularity)
 
         skips = [outputs]

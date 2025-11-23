@@ -39,6 +39,8 @@ class UNet(Model):
         super(UNet, self).__init__(params=params)
 
     def configure(self):
+        super().configure()
+
         out_channels = self.cfg.out_channels if self.cfg.out_channels is not None else self.cfg.in_channels
 
         granularity_embed_dim = self.cfg.embed_dim * 4

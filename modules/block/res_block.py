@@ -41,7 +41,8 @@ class ResidualBlock(Block):
 
         if granularity is not None:
             granularity = self.embed(granularity).type(h.dtype)
-            scale, shift = granularity.chunk(2, dim=1)
+            granularity = granularity[:, None, None, :]
+            scale, shift = granularity.chunk(2, dim=-1)
             h = h * (1 + scale) + shift
 
         h = self.pwconv1(h)

@@ -25,7 +25,7 @@ class UNet(Model):
         in_channels: int = 3
         embed_dim: int = 32
         out_channels: int = None
-        channel_mult: Tuple[int] = field(default_factory=lambda : (1, 2, 4, 8))
+        channels_mult: Tuple[int] = field(default_factory=lambda : (1, 2, 4, 8))
         depths: Union[List[int]] = field(default_factory=lambda : (2, 2, 2, 2))
         drop_path: float = 0.0
         mode: str = 'nearest'

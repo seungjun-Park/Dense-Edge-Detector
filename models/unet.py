@@ -175,7 +175,7 @@ class UNet(Model):
 
         loss, loss_log = self.loss_fn(imgs, preds, edges, labels, split='train' if self.training else 'valid')
 
-        if self.global_step % self.log_interval == 0 or not self.training:
+        if self.global_step % self.cfg.log_interval == 0 or not self.training:
             self.log_images(imgs, 'imgs')
             self.log_images(edges, 'edges')
             self.log_images(preds, 'preds')

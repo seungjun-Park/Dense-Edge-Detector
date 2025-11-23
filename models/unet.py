@@ -62,7 +62,7 @@ class UNet(Model):
         self.encoder_stages = nn.ModuleList()
         self.decoder_stages = nn.ModuleList()
 
-        for i, mult in enumerate(self.cfg.channel_mult):
+        for i, mult in enumerate(self.cfg.channels_mult):
             self.encoder_stages.append(
                 ConditionalSequential(
                     *[
@@ -78,7 +78,7 @@ class UNet(Model):
 
             skip_dims.append(in_ch)
 
-            if i != len(self.cfg.channel_mult) - 1:
+            if i != len(self.cfg.channels_mult) - 1:
                 self.encoder_stages.append(
                     ConvDownSample(
                         in_ch,
@@ -88,7 +88,7 @@ class UNet(Model):
 
                 in_ch = self.cfg.embed_dim * mult
 
-        for i, mult in list(enumerate(self.cfg.channel_mult))[::-1]:
+        for i, mult in list(enumerate(self.cfg.channels_mult))[::-1]:
             in_ch = in_ch + skip_dims.pop()
             self.decoder_stages.append(
                 ConditionalSequential(

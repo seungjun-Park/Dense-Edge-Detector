@@ -22,7 +22,7 @@ class ResidualBlock(Block):
 
         self.embed = nn.Sequential(
             nn.GELU(),
-            nn.Linear(embed_channels, in_channels * 8)
+            nn.Linear(embed_channels, in_channels * 2)
         )
 
         self.dwconv = nn.Conv2d(in_channels, in_channels, kernel_size=7, padding=3, groups=in_channels, bias=False)

@@ -5,155 +5,124 @@ import math
 
 from typing import Union, List, Tuple, Optional
 from collections.abc import Iterable
+from dataclasses import dataclass, field
 
+from omegaconf import DictConfig
 
 from models.model import Model
 from modules.downsample.conv import ConvDownSample
 from modules.upsample.conv import ConvUpSample
 from modules.block.res_block import ResidualBlock
-from modules.block.attention_block import AttentionBlock
 from modules.sequential.cond_sequential import ConditionalSequential
 
 from utils.load_module import load_module
+from modules.norm.layer_norm import LayerNorm2d
 
 
 class UNet(Model):
+    @dataclass
+    class Config(Model.Config):
+        in_channels: int = 3
+        embed_dim: int = 32
+        out_channels: int = None
+        channel_mult: Tuple[int] = field(default_factory=lambda : (1, 2, 4, 8))
+        depths: Union[List[int]] = field(default_factory=lambda : (2, 2, 2, 2))
+        drop_path: float = 0.0
+        mode: str = 'nearest'
+        use_checkpoint: bool = True
+
+    cfg: Config
+
     def __init__(self,
-                 in_channels: int,
-                 embed_dim: int,
-                 out_channels: int = None,
-                 channel_mult: Tuple[int] = (1, 2, 4, 8),
-                 num_blocks: int = 2,
-                 drop_path: float = 0.0,
-                 activation: str = 'torch.nn.GELU',
-                 mode: str = 'nearest',
-                 use_checkpoint: bool = True,
-                 num_groups: int = 1,
-                 num_heads: int = 8,
-                 num_head_channels: int = -1,
-                 *args,
-                 **kwargs,
+                 params: DictConfig
                  ):
-        super(UNet, self).__init__(*args, **kwargs)
+        super(UNet, self).__init__(params=params)
 
-        out_channels = out_channels if out_channels is not None else in_channels
+    def configure(self):
+        out_channels = self.cfg.out_channels if self.cfg.out_channels is not None else self.cfg.in_channels
 
-        make_activation = load_module(activation)
-
-        self.encoder = nn.ModuleList()
-        self.decoder = nn.ModuleList()
-
-        self.embed_dim = embed_dim
-        granularity_embed_dim = embed_dim * 4
+        granularity_embed_dim = self.cfg.embed_dim * 4
 
         self.granularity_embed = nn.Sequential(
-            nn.Linear(embed_dim, granularity_embed_dim),
-            make_activation(),
+            nn.Linear(self.cfg.embed_dim, granularity_embed_dim),
+            nn.GELU(),
             nn.Linear(granularity_embed_dim, granularity_embed_dim),
         )
 
         self.embed = nn.Sequential(
-            nn.Conv2d(in_channels, embed_dim, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(self.cfg.in_channels, self.cfg.in_channels, kernel_size=7, padding=3, groups=in_channels, bias=False),
+            nn.Conv2d(self.cfg.in_channels, self.cfg.embed_dim, kernel_size=1),
+            LayerNorm2d(self.cfg.embed_dim),
         )
 
-        in_ch = embed_dim
+        in_ch = self.cfg.embed_dim
 
-        skip_dims = [embed_dim]
+        skip_dims = [self.cfg.embed_dim]
 
-        for i, mult in enumerate(channel_mult):
-            for j in range(num_blocks):
-                self.encoder.append(
-                    ResidualBlock(
-                        in_channels=in_ch,
-                        embed_channels=granularity_embed_dim,
-                        out_channels=embed_dim * mult,
-                        use_checkpoint=use_checkpoint,
-                        activation=activation,
-                        drop_path=drop_path,
-                        num_groups=num_groups,
-                    ),
-                )
+        self.encoder_stages = nn.ModuleList()
+        self.decoder_stages = nn.ModuleList()
 
-                in_ch = embed_dim * mult
-                skip_dims.append(in_ch)
-
-            if i != len(channel_mult) - 1:
-                self.encoder.append(
-                    ConvDownSample(
-                        in_channels=in_ch,
-                        use_checkpoint=use_checkpoint,
-                    )
-                )
-
-                skip_dims.append(in_ch)
-
-        self.bottle_neck = ConditionalSequential(
-            ResidualBlock(
-                in_channels=in_ch,
-                embed_channels=granularity_embed_dim,
-                use_checkpoint=use_checkpoint,
-                activation=activation,
-                drop_path=drop_path,
-                num_groups=num_groups,
-            ),
-            AttentionBlock(
-                channels=in_ch,
-                num_groups=num_groups,
-                num_heads=num_heads,
-                num_head_channels=num_head_channels,
-                use_checkpoint=use_checkpoint
-            ),
-            ResidualBlock(
-                in_channels=in_ch,
-                embed_channels=granularity_embed_dim,
-                use_checkpoint=use_checkpoint,
-                activation=activation,
-                drop_path=drop_path,
-                num_groups=num_groups,
-            )
-        )
-
-        for i, mult in list(enumerate(channel_mult))[::-1]:
-            for j in range(num_blocks + 1):
-                self.decoder.append(
-                    ResidualBlock(
-                        in_channels=in_ch + skip_dims.pop(),
-                        embed_channels=granularity_embed_dim,
-                        out_channels=embed_dim * mult,
-                        use_checkpoint=use_checkpoint,
-                        activation=activation,
-                        drop_path=drop_path,
-                        num_groups=num_groups
-                    )
-                )
-                in_ch = embed_dim * mult
-
-                if i and j == num_blocks:
-                    self.decoder.append(
-                        ConvUpSample(
-                            in_channels=in_ch,
-                            mode=mode,
-                            use_checkpoint=use_checkpoint,
+        for i, mult in enumerate(self.cfg.channel_mult):
+            self.encoder_stages.append(
+                ConditionalSequential(
+                    *[
+                        ResidualBlock(
+                            in_ch,
+                            embed_channels=granularity_embed_dim,
+                            drop_path=self.cfg.drop_path
                         )
+                        for j in range(self.cfg.depths[i])
+                    ]
+                )
+            )
+
+            skip_dims.append(in_ch)
+
+            if i != len(self.cfg.channel_mult) - 1:
+                self.encoder_stages.append(
+                    ConvDownSample(
+                        in_ch,
+                        self.cfg.embed_dim * mult
                     )
+                )
+
+                in_ch = self.cfg.embed_dim * mult
+
+        for i, mult in list(enumerate(self.cfg.channel_mult))[::-1]:
+            in_ch = in_ch + skip_dims.pop()
+            self.decoder_stages.append(
+                ConditionalSequential(
+                    *[
+                        ResidualBlock(
+                            in_ch,
+                            embed_channels=granularity_embed_dim,
+                            drop_path=self.cfg.drop_path
+                        )
+                        for j in range(self.cfg.depths[i])
+                    ]
+                )
+            )
+
+            if i != 0:
+                self.decoder_stages.append(
+                    ConvUpSample(
+                        in_ch,
+                        self.cfg.embed_dim * mult,
+                        mode=self.cfg.mode
+                    )
+                )
+
+                in_ch = self.cfg.embed_dim * mult
 
         self.out = nn.Sequential(
-            nn.GroupNorm(num_groups, in_ch),
-            make_activation(),
-            nn.Conv2d(
-                embed_dim,
-                out_channels,
-                kernel_size=3,
-                padding=1,
-            ),
+            LayerNorm2d(in_ch),
+            nn.Conv2d(in_ch, in_ch, kernel_size=3, padding=1, bias=False, groups=in_ch),
+            nn.GELU(),
+            nn.Conv2d(in_ch, out_channels, kernel_size=1),
             nn.Sigmoid()
         )
 
-        if self.loss:
-            self.loss.eval()
-        self.save_hyperparameters(ignore='loss_config')
-
-    def _granularity_embedding(self, granularity, dim, max_period=10000):
+    def fourier_embedding(self, granularity, dim, max_period=10000):
         """
         Create sinusoidal timestep embeddings.
         :param timesteps: a 1-D Tensor of N indices, one per batch element.
@@ -175,17 +144,16 @@ class UNet(Model):
     def forward(self, inputs: torch.Tensor, granularity: torch.Tensor = None) -> torch.Tensor:
         outputs = self.embed(inputs)
         if granularity is not None:
-            granularity = self._granularity_embedding(granularity, dim=self.embed_dim)
+            granularity = self.fourier_embedding(granularity, dim=self.embed_dim)
             granularity = self.granularity_embed(granularity)
 
         skips = [outputs]
-        for block in self.encoder:
+        for block in self.encoder_stages:
             outputs = block(outputs, granularity)
-            skips.append(outputs)
+            if not isinstance(block, ConvDownSample):
+                skips.append(outputs)
 
-        outputs = self.bottle_neck(outputs, granularity)
-
-        for block in self.decoder:
+        for block in self.decoder_stages:
             if not isinstance(block, ConvUpSample):
                 outputs = torch.cat([outputs, skips.pop()], dim=1)
             outputs = block(outputs, granularity)

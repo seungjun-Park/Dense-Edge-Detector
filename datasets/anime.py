@@ -47,15 +47,16 @@ class AnimeDataset(Dataset):
         self.invert = transforms.RandomInvert(p=1.0)
         self.horizontal_flip = transforms.RandomHorizontalFlip(p=1.0)
         self.sep = '\\' if platform.system() == 'Windows' else '/'
+        self.img_len = len(self.img_names)
 
     def __getitem__(self, index):
+        level = index // self.img_len
+        index %= self.img_len
         img_name = self.img_names[index]
         path, name = img_name.split(f'{self.sep}images{self.sep}', 1)
 
         img = cv2.imread(f'{img_name}', cv2.IMREAD_COLOR)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-        level = random.randint(0, 2)
 
         if level == 0:
             label = torch.tensor([1.0])
@@ -87,4 +88,4 @@ class AnimeDataset(Dataset):
         return img, edge, label
 
     def __len__(self):
-        return len(self.img_names)
+        return self.img_len * 3

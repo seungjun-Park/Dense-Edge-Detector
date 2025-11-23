@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from typing import Union, List, Tuple, Type
 
 from modules.upsample import UpSample
+from modules.norm.layer_norm import LayerNorm2d
 
 
 class ConvUpSample(UpSample):
@@ -22,16 +23,18 @@ class ConvUpSample(UpSample):
 
         out_channels = out_channels if out_channels else in_channels
 
-        self.up_layer = nn.Sequential(
-            nn.Conv2d(
-                in_channels,
-                out_channels,
-                kernel_size=3,
-                padding=1,
-            )
+        self.norm = LayerNorm2d(in_channels)
+
+        self.conv = nn.Conv2d(
+            in_channels,
+            out_channels,
+            kernel_size=3,
+            padding=1,
+            bias=False
         )
 
     def _forward(self, x: torch.Tensor, granularity: torch.Tensor = None) -> torch.Tensor:
-        x = F.interpolate(x, scale_factor=2, mode=self.mode)
+        x = self.norm(x)
+        x = F.interpolate(x, scale_factor=self.scale_factor, mode=self.mode)
 
-        return self.up_layer(x)
+        return self.conv(x)

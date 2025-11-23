@@ -131,11 +131,18 @@ class UNet(Model):
         :param max_period: controls the minimum frequency of the embeddings.
         :return: an [N x dim] Tensor of positional embeddings.
         """
+        if granularity.ndim == 1:
+            granularity = granularity[:, None].float()
+        elif granularity.ndim == 2:
+            granularity = granularity.float()
+        else:
+            raise NotImplementedError(f"granularity ndim should be lower than 3. ndim < 3")
+
         half = dim // 2
         freqs = torch.exp(
             -math.log(max_period) * torch.arange(start=0, end=half, dtype=torch.float32) / half
         ).to(device=granularity.device)
-        args = granularity[:, None].float() * freqs[None]
+        args = granularity * freqs[None]
         embedding = torch.cat([torch.cos(args), torch.sin(args)], dim=-1)
         if dim % 2:
             embedding = torch.cat([embedding, torch.zeros_like(embedding[:, :1])], dim=-1)
@@ -160,22 +167,16 @@ class UNet(Model):
 
         return self.out(outputs)
 
-    def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
-        imgs, edges0, edges1, edges2 = batch
-        preds0 = self(imgs, torch.full((imgs.shape[0],), 1.0).to(imgs.device))
-        preds1 = self(imgs, torch.full((imgs.shape[0],), 0.5).to(imgs.device))
-        preds2 = self(imgs, torch.full((imgs.shape[0],), 0.0).to(imgs.device))
+    def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
+        imgs, edges, labels = batch
+        preds = self(imgs, labels)
 
-        loss, loss_log = self.loss(imgs, edges0, edges1, edges2, preds0, preds1, preds2, self.global_step, split='train' if self.training else 'valid')
+        loss, loss_log = self.loss_fn(imgs, preds, edges, self.global_step, split='train' if self.training else 'valid')
 
         if self.global_step % self.log_interval == 0 or not self.training:
             self.log_images(imgs, 'imgs')
-            self.log_images(edges0, 'edges0')
-            self.log_images(preds0, 'preds0')
-            self.log_images(edges1, 'edges1')
-            self.log_images(preds1, 'preds1')
-            self.log_images(edges2, 'edges2')
-            self.log_images(preds2, 'preds2')
+            self.log_images(edges, 'edges')
+            self.log_images(preds, 'preds')
 
         self.log_dict(loss_log, prog_bar=True)
 

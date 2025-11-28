@@ -12,7 +12,7 @@ module:
         granularity_weight: 1.2
 
     in_channels: 3
-    embed_dim: 64
+    embed_dim: 32
     out_channels: 1
     channels_mult: [ 1, 2, 4, 8 ]
     depths: [2, 2, 2, 2]

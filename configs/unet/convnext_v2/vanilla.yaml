@@ -9,10 +9,10 @@ module:
         gnet_ckpt: './checkpoints/gnet/convnext_v2/best.ckpt'
         lpips_weight: 1.0
         l1_weight: 1.0
-        granularity_weight: 1.0
+        granularity_weight: 1.2
 
     in_channels: 3
-    embed_dim: 32
+    embed_dim: 64
     out_channels: 1
     channels_mult: [ 1, 2, 4, 8 ]
     depths: [2, 2, 2, 2]
@@ -72,6 +72,6 @@ checkpoints:
 
 trainer:
   accelerator: 'gpu'
-  max_epochs: 200
-  accumulate_grad_batches: 5
+  max_epochs: 100
+  accumulate_grad_batches: 2
   # precision: 'bf16'

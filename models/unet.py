@@ -15,8 +15,8 @@ from modules.upsample.conv import ConvUpSample
 from modules.block.res_block import ResidualBlock
 from modules.sequential.cond_sequential import ConditionalSequential
 
-from utils.load_module import load_module
 from modules.norm.layer_norm import LayerNorm2d
+from losses.l1lpips import L1LPIPS
 
 
 class UNet(Model):
@@ -40,6 +40,8 @@ class UNet(Model):
 
     def configure(self):
         super().configure()
+
+        self.loss_fn = self.loss_fn.eval()
 
         out_channels = self.cfg.out_channels if self.cfg.out_channels is not None else self.cfg.in_channels
 
@@ -171,6 +173,9 @@ class UNet(Model):
 
     def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
         imgs, edges, labels = batch
+        if isinstance(self.loss_fn, L1LPIPS):
+            labels = self.loss_fn.gnet(edges)
+
         preds = self(imgs, labels)
 
         loss, loss_log = self.loss_fn(imgs, preds, edges, labels, split='train' if self.training else 'valid')

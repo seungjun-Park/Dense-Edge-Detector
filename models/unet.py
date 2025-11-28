@@ -174,7 +174,7 @@ class UNet(Model):
     def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
         imgs, edges, labels = batch
         if isinstance(self.loss_fn, L1LPIPS):
-            labels = self.loss_fn.gnet(edges)
+            labels = self.loss_fn.gnet(imgs, edges)
 
         preds = self(imgs, labels)
 

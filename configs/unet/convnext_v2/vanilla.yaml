@@ -74,4 +74,5 @@ trainer:
   accelerator: 'gpu'
   max_epochs: 100
   accumulate_grad_batches: 2
+  ckpt_path: './checkpoints/unet/convnext_v2/vanilla/best.ckpt'
   # precision: 'bf16'

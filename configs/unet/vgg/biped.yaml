@@ -18,6 +18,7 @@ module:
     depths: [2, 2, 2, 2]
     drop_path: 0.2
     use_checkpoint: True
+    ckpt_path: './checkpoints/unet/vgg/finetune/best.ckpt'
 
 data:
   target: datasets.util.DataModuleFromConfig

@@ -5,6 +5,7 @@ import torch
 import pytorch_lightning as pl
 import torchvision.transforms as tf
 from torch.utils.data import Dataset, DataLoader, IterableDataset
+from torch.utils.data.dataloader import default_collate
 
 from utils import partial, instantiate_from_config
 
@@ -22,6 +23,18 @@ def worker_init_fn(_):
         return np.random.seed(np.random.get_state()[1][current_id] + worker_id)
     else:
         return np.random.seed(np.random.get_state()[1][0] + worker_id)
+
+def collate_keep_none(batch):
+    transposed_data = list(zip(*batch))
+
+    output = []
+    for samples in transposed_data:
+        if samples[0] is None:
+            output.append(None)
+        else:
+            output.append(default_collate(samples))
+
+    return output
 
 
 class DataModuleFromConfig(pl.LightningDataModule):
@@ -73,7 +86,8 @@ class DataModuleFromConfig(pl.LightningDataModule):
                           num_workers=self.num_workers,
                           shuffle=False if is_iterable_dataset else True,
                           worker_init_fn=init_fn,
-                          persistent_workers=True)
+                          persistent_workers=True,
+                          collate_fn=collate_keep_none)
 
     def _validation_dataloader(self, shuffle=True):
         if isinstance(self.datasets['validation'], IterableDataset) or self.use_worker_init_fn:
@@ -85,7 +99,8 @@ class DataModuleFromConfig(pl.LightningDataModule):
                           num_workers=self.num_workers,
                           worker_init_fn=init_fn,
                           shuffle=shuffle,
-                          persistent_workers=True)
+                          persistent_workers=True,
+                          collate_fn=collate_keep_none)
 
     def _test_dataloader(self, shuffle=True):
         is_iterable_dataset = isinstance(self.datasets['test'], IterableDataset)
@@ -102,7 +117,8 @@ class DataModuleFromConfig(pl.LightningDataModule):
                           num_workers=self.num_workers,
                           worker_init_fn=init_fn,
                           shuffle=shuffle,
-                          persistent_workers=True)
+                          persistent_workers=True,
+                          collate_fn=collate_keep_none)
 
     def _predict_dataloader(self, shuffle=True):
         if isinstance(self.datasets['predict'], IterableDataset) or self.use_worker_init_fn:

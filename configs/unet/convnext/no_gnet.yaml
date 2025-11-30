@@ -6,10 +6,10 @@ module:
     loss_config:
       target: losses.l1lpips.L1LPIPS
       params:
-        gnet_ckpt: './checkpoints/gnet/convnext_v2/best.ckpt'
+        gnet_ckpt: './checkpoints/gnet/convnext/best.ckpt'
         lpips_weight: 1.0
         l1_weight: 1.0
-        granularity_weight: 1.2
+        granularity_weight: 0.0
 
     in_channels: 3
     embed_dim: 32
@@ -47,15 +47,15 @@ logger:
   target: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
   params:
     save_dir: './logs'
-    name: 'unet/convnext_v2'
-    version: 'vanilla'
+    name: 'unet/convnext'
+    version: 'no_gnet'
 
 
 checkpoints:
   latest_checkpoints:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/convnext_v2/vanilla'
+      dirpath: './checkpoints/unet/convnext/no_gnet'
       filename: 'last'
       monitor: 'step'
       mode: 'max'
@@ -64,7 +64,7 @@ checkpoints:
   best_checkpoint:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/convnext_v2/vanilla'
+      dirpath: './checkpoints/unet/convnext/no_gnet'
       filename: 'best'
       monitor: 'valid/total_loss'
       mode: 'min'
@@ -74,3 +74,4 @@ trainer:
   accelerator: 'gpu'
   max_epochs: 100
   accumulate_grad_batches: 2
+  # precision: 'bf16'

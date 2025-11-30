@@ -26,30 +26,8 @@ class BIPEDDataset(Dataset):
                  size: int | List[int] | Tuple[int] = 224,
                  scale: List[float] | Tuple[float] = (0.08, 1.0),
                  ratio: List[float] | Tuple[float] = (1.0, 1.0),
-                 color_space: str = 'rgb',
                  ):
         super().__init__()
-        color_space = color_space.lower()
-        if color_space == 'rgb':
-            self.color_space = cv2.COLOR_BGR2RGB
-        elif color_space == 'rgba':
-            self.color_space = cv2.COLOR_BGR2RGBA
-        elif color_space == 'gray':
-            self.color_space = cv2.COLOR_BGR2GRAY
-        elif color_space == 'xyz':
-            self.color_space = cv2.COLOR_BGR2XYZ
-        elif color_space == 'ycrcb':
-            self.color_space = cv2.COLOR_BGR2YCrCb
-        elif color_space == 'hsv':
-            self.color_space = cv2.COLOR_BGR2HSV
-        elif color_space == 'lab':
-            self.color_space = cv2.COLOR_BGR2LAB
-        elif color_space == 'luv':
-            self.color_space = cv2.COLOR_BGR2LUV
-        elif color_space == 'hls':
-            self.color_space = cv2.COLOR_BGR2HLS
-        elif color_space == 'yuv':
-            self.color_space = cv2.COLOR_BGR2YUV
 
         self.to_tensor = transforms.ToTensor()
 
@@ -64,7 +42,6 @@ class BIPEDDataset(Dataset):
 
         self.edge_names = glob.glob(f'{root}/edges/*.*')
         self.img_names = glob.glob(f'{root}/images/*.*')
-        self.granularity = glob.glob(f'{root}/granularity/*.*')
 
         self.color_jitter = transforms.ColorJitter(brightness=0, contrast=0.5, saturation=0.5, hue=0.5)
         self.invert = transforms.RandomInvert(p=1.0)
@@ -79,7 +56,7 @@ class BIPEDDataset(Dataset):
         assert edge_name.rsplit('/', 1)[1] == img_name.rsplit('/', 1)[1]
 
         img = cv2.imread(f'{img_name}', cv2.IMREAD_COLOR)
-        img = cv2.cvtColor(img, self.color_space)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         edge = cv2.imread(f'{edge_name}', cv2.IMREAD_GRAYSCALE)
 
         img = self.to_tensor(img)

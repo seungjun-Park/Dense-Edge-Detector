@@ -28,42 +28,46 @@ from models.discriminator import Discriminator
 
 
 def test():
-    model = UNet.load_from_checkpoint('./checkpoints/unet/convnext/vanilla/best.ckpt', strict=False).eval().cuda()
+    versions = ['vgg', 'convnext', 'convnext_v2']
 
-    data_path = 'D:/datasets/anime/train/yae_miko/images'
+    data_path = f'D:/datasets/anime/*/*/images'
     # data_path = 'D:/datasets/BIPED/val/images'
     # data_path = '../BSDS500/images/test'
+    # data_path = 'D:/datasets/div2k/test/x2'
     file_names = glob.glob(f'{data_path}/*.*')
-    gs = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    j = 0
-    with torch.inference_mode():
-        for name in tqdm.tqdm(file_names):
-            img = cv2.imread(f'{name}', cv2.IMREAD_COLOR)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            img = torchvision.transforms.ToTensor()(img).cuda()
-            img = torchvision.transforms.Resize(720, interpolation=InterpolationMode.BICUBIC, antialias=True, max_size=800)(img)
-            c, h, w = img.shape
-            img = img.unsqueeze(0)
-            if w % 8 != 0:
-                w = int(round(w / 8) * 8)
-            if h % 8 != 0:
-                h = int(round(h / 8) * 8)
+    gs = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 
-            img = F.interpolate(img, [h, w], mode='bicubic', antialias=True)
+    for v in versions:
+        model = UNet.load_from_checkpoint(f'./checkpoints/unet/{v}/vanilla/best.ckpt', strict=False).eval().cuda()
+        model.loss_fn = None
+        with torch.inference_mode():
+            for name in tqdm.tqdm(file_names):
+                img = cv2.imread(f'{name}', cv2.IMREAD_COLOR)
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                img = torchvision.transforms.ToTensor()(img).cuda()
+                img = torchvision.transforms.Resize(520, interpolation=InterpolationMode.BICUBIC, antialias=True, max_size=528)(img)
+                c, h, w = img.shape
+                img = img.unsqueeze(0)
+                if w % 8 != 0:
+                    w = int(round(w / 8) * 8)
+                if h % 8 != 0:
+                    h = int(round(h / 8) * 8)
 
-            edges = model(img, torch.tensor([0.0]).cuda())
-            edges = edges.float().detach().cpu()[0]
-            edges = torchvision.transforms.ToPILImage()(edges)
-            for i, g in enumerate(gs):
-                edge = model(img, torch.tensor([g]).cuda())
-                edge = edge.float().detach().cpu()[0]
-                edge = torchvision.transforms.ToPILImage()(edge)
-                edges = np.concat([edges, edge], axis=-1)
+                img = F.interpolate(img, [h, w], mode='bicubic', antialias=True)
 
-            edges = Image.fromarray(edges)
-            n = name.rsplit('\\', 1)[-1].rsplit('.', 1)[0]
-            edges.save(f'./{n}.png', 'png')
-            j += 1
+                # edges = model(img, torch.tensor([0.0]).cuda())
+                # edges = edges.float().detach().cpu()[0]
+                # edges = torchvision.transforms.ToPILImage()(edges)
+                n = name.rsplit('\\', 4)
+                f = n[-1]
+                n = "/".join([n[1], n[2]])
+                for i, g in enumerate(gs):
+                    edge = model(img, torch.tensor([g]).cuda())
+                    edge = edge.float().detach().cpu()[0]
+                    edge = torchvision.transforms.ToPILImage()(edge)
+
+                    os.makedirs(f'./test/{v}/{n}/{i}', exist_ok=True)
+                    edge.save(f'./test/{v}/{n}/{i}/{f}', 'png')
 
 if __name__ == '__main__':
     test()

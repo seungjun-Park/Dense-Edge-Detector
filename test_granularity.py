@@ -24,9 +24,9 @@ from torchvision.transforms import InterpolationMode
 from utils import instantiate_from_config
 from models.model import Model
 from models.discriminator import Discriminator
-from models.lpieps import LPIEPS
 from models.unet import UNet
 from taming.modules.losses import LPIPS
+from models.gnet import GranularityNet
 
 
 def get_parser(**parser_kwargs):
@@ -46,11 +46,11 @@ def get_parser(**parser_kwargs):
 
 
 def test():
-    model = LPIEPS.load_from_checkpoint('./checkpoints/lpieps/convnext/best-v1.ckpt', strict=False).eval().cuda()
+    model = GranularityNet.load_from_checkpoint('./checkpoints/gnet/vgg/best.ckpt', strict=False).eval().cuda()
     # print(model.lins[0].model[1].weight)
     # for lin in model.lins:
     #     print(torch.where(lin.model[1].weight < 0.))
-    data_path = 'D:/datasets/anime/*/*'
+    data_path = 'D:/datasets/anime/val/*'
     # data_path = 'D:/datasets/BIPED/*'
     file_names = zip(glob.glob(f'{data_path}/images/*.*'), glob.glob(f'{data_path}/edges_0/*.*'), glob.glob(f'{data_path}/edges_1/*.*'), glob.glob(f'{data_path}/edges_2/*.*'))
     avg_scores = []
@@ -97,7 +97,7 @@ def test():
     print(scores_1, scores_2, scores_3)
 
 def visualization():
-    model = LPIEPS.load_from_checkpoint('./checkpoints/lpieps/convnext/best.ckpt', strict=False).eval().cuda()
+    model = GranularityNet.load_from_checkpoint('./checkpoints/lpieps/convnext/best.ckpt', strict=False).eval().cuda()
     model.loss = None
     data_path = 'D:/datasets/anime/*/*'
     # data_path = 'D:/datasets/BIPED/*'
@@ -150,8 +150,8 @@ def visualization():
 
 
 def save_score():
-    model1 = LPIEPS.load_from_checkpoint('./checkpoints/lpieps/convnext/best.ckpt', strict=False).eval().cuda()
-    model2 = LPIEPS.load_from_checkpoint('./checkpoints/lpieps/vgg/best.ckpt', strict=False).eval().cuda()
+    model1 = GranularityNet.load_from_checkpoint('./checkpoints/lpieps/convnext/best.ckpt', strict=False).eval().cuda()
+    model2 = GranularityNet.load_from_checkpoint('./checkpoints/lpieps/vgg/best.ckpt', strict=False).eval().cuda()
     data_path = 'D:/datasets/anime/*/*'
     # data_path = 'D:/datasets/BIPED/*'
     data_path = glob.glob(data_path)

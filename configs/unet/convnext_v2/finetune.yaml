@@ -7,9 +7,9 @@ module:
       target: losses.l1lpips.L1LPIPS
       params:
         gnet_ckpt: './checkpoints/gnet/convnext_v2/best.ckpt'
-        lpips_weight: 1.0
-        l1_weight: 1.0
-        granularity_weight: 1.2
+        lpips_weight: 0
+        l1_weight: 0
+        granularity_weight: 1.0
 
     in_channels: 3
     embed_dim: 32
@@ -18,6 +18,7 @@ module:
     depths: [2, 2, 2, 2]
     drop_path: 0.2
     use_checkpoint: True
+    ckpt_path: './checkpoints/unet/convnext_v2/vanilla/best.ckpt'
 
 data:
   target: datasets.util.DataModuleFromConfig
@@ -26,7 +27,7 @@ data:
     batch_size: 2
     wrap: True
     train:
-      target: datasets.anime.AnimeDataset
+      target: datasets.anime.AnimeDummyDataset
       params:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/anime'
@@ -35,7 +36,7 @@ data:
         scale: [ 0.5, 1.0 ]
 
     validation:
-      target: datasets.anime.AnimeDataset
+      target: datasets.anime.AnimeDummyDataset
       params:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/anime'
@@ -48,14 +49,14 @@ logger:
   params:
     save_dir: './logs'
     name: 'unet/convnext_v2'
-    version: 'vanilla'
+    version: 'finetune'
 
 
 checkpoints:
   latest_checkpoints:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/convnext_v2/vanilla'
+      dirpath: './checkpoints/unet/convnext_v2/finetune'
       filename: 'last'
       monitor: 'step'
       mode: 'max'
@@ -64,7 +65,7 @@ checkpoints:
   best_checkpoint:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/convnext_v2/vanilla'
+      dirpath: './checkpoints/unet/convnext_v2/finetune'
       filename: 'best'
       monitor: 'valid/total_loss'
       mode: 'min'
@@ -72,5 +73,5 @@ checkpoints:
 
 trainer:
   accelerator: 'gpu'
-  max_epochs: 100
+  max_epochs: 1
   accumulate_grad_batches: 2

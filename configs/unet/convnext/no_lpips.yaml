@@ -2,36 +2,21 @@ module:
   target: models.unet.UNet
   params:
     lr: 1e-4
-    weight_decay: 0.0
-    lr_decay_epoch: 100
-    use_fp16: False
     log_interval: 50
     loss_config:
       target: losses.l1lpips.L1LPIPS
       params:
-        lpips_weight: 1.0
-        l1_weight: 0.0
-        lpieps_ckpt: './checkpoints/lpieps/convnext/best.ckpt'
-        lpieps_start_step: 6e2
-        ema_decay: 0.99
-        ema_lpieps_lv0: 0.13
-        ema_lpieps_lv2: 1.5
-        lpieps_lv0_weight: 1.1
-        lpieps_lv1_weight: 1.5
-        lpieps_lv2_weight: 0.5
-        max_lpieps: 1.6
+        gnet_ckpt: './checkpoints/gnet/convnext/best.ckpt'
+        lpips_weight: 0.0
+        l1_weight: 1.0
+        granularity_weight: 1.2
 
     in_channels: 3
     embed_dim: 32
     out_channels: 1
     channels_mult: [ 1, 2, 4, 8 ]
-    num_blocks: 2
-    num_groups: 8
-    num_heads: 8
-    num_head_channels: -1
-    drop_path: 0.1
-    activation: 'torch.nn.GELU'
-    mode: 'nearest'
+    depths: [2, 2, 2, 2]
+    drop_path: 0.2
     use_checkpoint: True
 
 data:
@@ -88,5 +73,5 @@ checkpoints:
 trainer:
   accelerator: 'gpu'
   max_epochs: 100
-  accumulate_grad_batches: 5
+  accumulate_grad_batches: 2
   # precision: 'bf16'

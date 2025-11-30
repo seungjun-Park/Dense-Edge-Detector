@@ -2,37 +2,23 @@ module:
   target: models.unet.UNet
   params:
     lr: 1e-4
-    weight_decay: 0.0
-    lr_decay_epoch: 100
-    use_fp16: False
     log_interval: 50
     loss_config:
       target: losses.l1lpips.L1LPIPS
       params:
-        lpips_weight: 1.0
-        l1_weight: 1.0
-        lpieps_ckpt: './checkpoints/lpieps/convnext/best.ckpt'
-        lpieps_start_step: 6e2
-        ema_decay: 0.99
-        ema_lpieps_lv0: 0.13
-        ema_lpieps_lv2: 1.5
-        lpieps_lv0_weight: 0
-        lpieps_lv1_weight: 0
-        lpieps_lv2_weight: 0
-        max_lpieps: 1.6
+        gnet_ckpt: './checkpoints/gnet/vgg/best.ckpt'
+        lpips_weight: 0
+        l1_weight: 0
+        granularity_weight: 1.0
 
     in_channels: 3
     embed_dim: 32
     out_channels: 1
     channels_mult: [ 1, 2, 4, 8 ]
-    num_blocks: 2
-    num_groups: 8
-    num_heads: 8
-    num_head_channels: -1
-    drop_path: 0.1
-    activation: 'torch.nn.GELU'
-    mode: 'nearest'
+    depths: [2, 2, 2, 2]
+    drop_path: 0.2
     use_checkpoint: True
+    ckpt_path: './checkpoints/unet/vgg/vanilla/best.ckpt'
 
 data:
   target: datasets.util.DataModuleFromConfig
@@ -41,7 +27,7 @@ data:
     batch_size: 2
     wrap: True
     train:
-      target: datasets.anime.AnimeDataset
+      target: datasets.anime.AnimeDummyDataset
       params:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/anime'
@@ -50,7 +36,7 @@ data:
         scale: [ 0.5, 1.0 ]
 
     validation:
-      target: datasets.anime.AnimeDataset
+      target: datasets.anime.AnimeDummyDataset
       params:
         root: '/local_datasets/anime'
         # root: 'D:/datasets/anime'
@@ -62,15 +48,15 @@ logger:
   target: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
   params:
     save_dir: './logs'
-    name: 'unet/convnext'
-    version: 'no_lpieps'
+    name: 'unet/vgg'
+    version: 'finetune'
 
 
 checkpoints:
   latest_checkpoints:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/convnext/no_lpieps'
+      dirpath: './checkpoints/unet/vgg/finetune'
       filename: 'last'
       monitor: 'step'
       mode: 'max'
@@ -79,7 +65,7 @@ checkpoints:
   best_checkpoint:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/convnext/no_lpieps'
+      dirpath: './checkpoints/unet/vgg/finetune'
       filename: 'best'
       monitor: 'valid/total_loss'
       mode: 'min'
@@ -87,6 +73,5 @@ checkpoints:
 
 trainer:
   accelerator: 'gpu'
-  max_epochs: 100
-  accumulate_grad_batches: 5
-  # precision: 'bf16'
+  max_epochs: 1
+  accumulate_grad_batches: 2

@@ -211,3 +211,4 @@ features/*
 train_pair_datasets.json
 val_pair_datasets.json
 convnext/*
+test/*

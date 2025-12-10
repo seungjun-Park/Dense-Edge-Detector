@@ -26,9 +26,10 @@ class L1LPIPS(Loss):
         self.l1_weight = l1_weight
         self.granularity_weight = granularity_weight
 
-        self.gnet = GranularityNet.load_from_checkpoint(gnet_ckpt, strict=False).eval()
-        for param in self.gnet.parameters():
-            param.requires_grad = False
+        if granularity_weight > 0:
+            self.gnet = GranularityNet.load_from_checkpoint(gnet_ckpt, strict=False).eval()
+            for param in self.gnet.parameters():
+                param.requires_grad = False
 
 
     def l1_edge_weight(self, edge: torch.Tensor) -> torch.Tensor:

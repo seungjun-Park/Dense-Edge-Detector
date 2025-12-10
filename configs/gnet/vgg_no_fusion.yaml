@@ -6,7 +6,7 @@ module:
     lr: 1e-4
     weight_decay: 0.0
     log_interval: 50
-    use_fusion_block: True
+    use_fusion_block: False
     loss_config:
       target: losses.triplet.TripletMarginLoss
 
@@ -39,14 +39,14 @@ logger:
   params:
     save_dir: './logs'
     name: 'gnet'
-    version: 'vgg'
+    version: 'vgg_no_fusion'
 
 
 checkpoints:
   latest_checkpoints:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/gnet/vgg'
+      dirpath: './checkpoints/gnet/vgg_no_fusion'
       filename: 'last'
       monitor: 'step'
       mode: 'max'
@@ -55,7 +55,7 @@ checkpoints:
   best_checkpoint:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/gnet/vgg'
+      dirpath: './checkpoints/gnet/vgg_no_fusion'
       filename: 'best'
       monitor: 'valid/loss'
       mode: 'min'

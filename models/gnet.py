@@ -34,7 +34,7 @@ class FusionBlock(nn.Module):
         fusion_dim = in_channels * 2
 
         self.fusion_conv = nn.Sequential(
-            nn.Conv2d(fusion_dim, in_channels, kernel_size=3, padding=1, bias=False),
+            nn.Conv2d(fusion_dim, in_channels, kernel_size=3, padding=1),
             LayerNorm2d(in_channels),
             nn.GELU()
         )
@@ -43,11 +43,20 @@ class FusionBlock(nn.Module):
         return self.fusion_conv(torch.cat([x0, x1], dim=1)).mean(dim=[-2, -1])
 
 
+class ConcatBlock(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x0: torch.Tensor, x1: torch.Tensor) -> torch.Tensor:
+        return torch.cat([x0, x1], dim=1).mean(dim=[-2, -1])
+
+
 class GranularityNet(Model):
     @dataclass
     class Config(Model.Config):
         backbone: str = 'vgg'
         dropout: float = 0.
+        use_fusion_block: bool = True,
         model_mapper: Dict = field(default_factory=lambda : {
             'vgg': 'vgg16_bn',
             'convnext': 'convnext_base',
@@ -81,11 +90,16 @@ class GranularityNet(Model):
 
         feature_channels = self.backbone.feature_info.channels()
 
-        self.fusion_blocks = nn.ModuleList([
-            FusionBlock(c) for c in feature_channels
-        ])
+        if self.cfg.use_fusion_block:
+            self.blocks = nn.ModuleList([
+                FusionBlock(c) for c in feature_channels
+            ])
+        else:
+            self.blocks = nn.ModuleList([
+                ConcatBlock() for c in feature_channels
+            ])
 
-        total_dims = sum(feature_channels)
+        total_dims = sum(feature_channels) * (1 if self.cfg.use_fusion_block else 2)
         self.head = nn.Sequential(
             nn.Linear(total_dims, 512),
             nn.GELU(),
@@ -108,11 +122,11 @@ class GranularityNet(Model):
         feats_imgs = self.backbone(imgs)
         feats_edges = self.backbone(edges)
 
-        fused_feats = []
-        for fusion_block, feat_imgs, feat_edges in zip(self.fusion_blocks, feats_imgs, feats_edges):
-            fused_feats.append(fusion_block(feat_imgs, feat_edges))
+        feats = []
+        for block, feat_imgs, feat_edges in zip(self.blocks, feats_imgs, feats_edges):
+            feats.append(block(feat_imgs, feat_edges))
 
-        global_feat = torch.cat(fused_feats, dim=1)
+        global_feat = torch.cat(feats, dim=1)
 
         return self.head(global_feat)
 

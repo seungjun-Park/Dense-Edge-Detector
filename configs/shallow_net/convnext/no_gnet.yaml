@@ -1,0 +1,77 @@
+module:
+  target: models.unet.UNet
+  params:
+    lr: 1e-4
+    log_interval: 50
+    loss_config:
+      target: losses.l1lpips.L1LPIPS
+      params:
+        gnet_ckpt: './checkpoints/gnet/convnext/best.ckpt'
+        lpips_weight: 1.0
+        l1_weight: 1.0
+        granularity_weight: 0.0
+
+    in_channels: 3
+    embed_dim: 32
+    out_channels: 1
+    channels_mult: [ 1, 2, 4, 8 ]
+    depths: [2, 2, 2, 2]
+    drop_path: 0.2
+    use_checkpoint: True
+
+data:
+  target: datasets.util.DataModuleFromConfig
+  params:
+    num_workers: 4
+    batch_size: 2
+    wrap: True
+    train:
+      target: datasets.anime.AnimeDataset
+      params:
+        root: '/local_datasets/anime'
+        # root: 'D:/datasets/anime'
+        train: True
+        size: [512, 512]
+        scale: [ 0.5, 1.0 ]
+
+    validation:
+      target: datasets.anime.AnimeDataset
+      params:
+        root: '/local_datasets/anime'
+        # root: 'D:/datasets/anime'
+        train: False
+        size: [512, 512]
+        scale: [ 0.5, 1.0 ]
+
+logger:
+  target: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
+  params:
+    save_dir: './logs'
+    name: 'unet/convnext'
+    version: 'no_gnet'
+
+
+checkpoints:
+  latest_checkpoints:
+    target: pytorch_lightning.callbacks.ModelCheckpoint
+    params:
+      dirpath: './checkpoints/unet/convnext/no_gnet'
+      filename: 'last'
+      monitor: 'step'
+      mode: 'max'
+      save_top_k: 1
+
+  best_checkpoint:
+    target: pytorch_lightning.callbacks.ModelCheckpoint
+    params:
+      dirpath: './checkpoints/unet/convnext/no_gnet'
+      filename: 'best'
+      monitor: 'valid/total_loss'
+      mode: 'min'
+      save_top_k: 1
+
+trainer:
+  accelerator: 'gpu'
+  max_epochs: 100
+  accumulate_grad_batches: 2
+  # precision: 'bf16'

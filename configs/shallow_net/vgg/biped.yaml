@@ -14,7 +14,7 @@ module:
     in_channels: 3
     embed_dim: 32
     out_channels: 1
-    ckpt_path: './checkpoints/unet/vgg/finetune/best.ckpt'
+    ckpt_path: './checkpoints/shallow_net/vgg/finetune/best.ckpt'
 
 data:
   target: datasets.util.DataModuleFromConfig

@@ -205,7 +205,7 @@ class UNet(DefaultModel):
         model_channels: int = 32
         out_channels: int = None
         num_res_blocks: int = 2,
-        attention_resolutions: Tuple[int] = field(default_factory=list())
+        attention_resolutions: Tuple[int] = field(default_factory=lambda : [])
         channels_mult: Tuple[int] = field(default_factory=lambda : (1, 2, 4, 8))
         drop_prob: float = 0.2
         use_checkpoint: bool = True

@@ -18,18 +18,18 @@ from utils.checkpoints import checkpoint
 
 class GranularityBlock(nn.Module):
     @abstractmethod
-    def forward(self, x: torch.Tensor, granularity: torch.Tensor = None) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, granularity: torch.Tensor) -> torch.Tensor:
         pass
 
 
 class GranularityEmbedSequential(nn.Sequential, GranularityBlock):
-    def forward(self, x: torch.Tensor, granularity: torch.Tensor = None) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, granularity: torch.Tensor) -> torch.Tensor:
         for layer in self:
             if isinstance(layer, GranularityBlock):
                 x = layer(x, granularity)
             else:
                 x = layer(x)
-
+        return x
 
 class Upsample(nn.Module):
     def __init__(self,
@@ -104,15 +104,12 @@ class ResBlock(GranularityBlock):
         else:
             self.skip = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
 
-    def forward(self, x: torch.Tensor, granularity: torch.Tensor = None) -> torch.Tensor:
-        args = [x]
-        if granularity is not None:
-            args.append(granularity)
-        return checkpoint(self._forward, tuple(args), self.parameters(), self.use_checkpoint)
+    def forward(self, x: torch.Tensor, granularity: torch.Tensor) -> torch.Tensor:
+        return checkpoint(self._forward, (x, granularity), self.parameters(), self.use_checkpoint)
 
     def _forward(self, x: torch.Tensor, granularity: torch.Tensor = None) -> torch.Tensor:
         h = self.in_layers(x)
-        emb_out = self.emb_layers(granularity).type(h.type)
+        emb_out = self.emb_layers(granularity)
         while len(emb_out.shape) < len(h.shape):
             emb_out = emb_out[..., None]
         out_norm, out_rest = self.out_layers[0], self.out_layers[1: ]
@@ -346,12 +343,12 @@ class UNet(DefaultModel):
                         )
                     )
                 self.output_blocks.append(GranularityEmbedSequential(*layers))
-                
+
         self.out = nn.Sequential(
             nn.GroupNorm(self.cfg.num_groups, in_ch),
             nn.GELU(approximate='tanh'),
             zero_module(
-                nn.Conv2d(in_ch, self.cfg.out_channels, kernel_size=3, padding=1),
+                nn.Conv2d(in_ch, out_channels, kernel_size=3, padding=1),
             ),
             nn.Sigmoid()
         )
@@ -360,18 +357,17 @@ class UNet(DefaultModel):
         skips = []
         granularity = granularity_embedding(granularity, dim=self.cfg.model_channels)
         emb = self.granularity_embed(granularity)
-        h = x
         for module in self.input_blocks:
-            h = module(h, emb)
-            skips.append(h)
+            x = module(x, emb)
+            skips.append(x)
 
-        h = self.middle_blocks(h)
+        x = self.middle_blocks(x)
 
         for module in self.output_blocks:
-            h = torch.cat([h, skips.pop()], dim=1)
-            h = module(h, emb)
+            x = torch.cat([x, skips.pop()], dim=1)
+            x = module(x, emb)
 
-        return self.out(h)
+        return self.out(x)
 
     def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
         imgs, edges, labels = batch

@@ -15,7 +15,7 @@ class CheckpointFunction(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, *output_grads):
-        ctx.input_tensors = [x.detach().requires_grad_(True) if x is not None else x for x in ctx.input_tensors]
+        ctx.input_tensors = [x.detach().requires_grad_(True) for x in ctx.input_tensors]
         with torch.enable_grad():
             output_tensors = ctx.run_function(*ctx.input_tensors)
 

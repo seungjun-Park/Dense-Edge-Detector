@@ -18,7 +18,7 @@ module:
     channels_mult: [ 1, 2, 4, 8 ]
     drop_prob: 0.2
     use_checkpoint: True
-    num_heads: 8,
+    num_heads: 8
     num_head_channels: -1
     num_groups: 32
     ckpt_path: './checkpoints/unet/vgg/finetune/best.ckpt'
@@ -36,7 +36,7 @@ data:
         # root: 'D:/datasets/anime'
         train: True
         size: [512, 512]
-        scale: [ 0.5, 1.0 ]
+        scale: [ 0.75, 1.0 ]
 
     validation:
       target: datasets.biped.BIPEDDataset
@@ -45,7 +45,7 @@ data:
         # root: 'D:/datasets/anime'
         train: False
         size: [512, 512]
-        scale: [ 0.5, 1.0 ]
+        scale: [ 0.75, 1.0 ]
 
 logger:
   target: pytorch_lightning.loggers.tensorboard.TensorBoardLogger

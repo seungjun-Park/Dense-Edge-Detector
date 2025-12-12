@@ -16,7 +16,7 @@ from pytorch_lightning.trainer import Trainer
 import time
 
 from utils import instantiate_from_config
-from models.model import Model
+from models import DefaultModel
 from models.unet import UNet
 
 
@@ -77,7 +77,7 @@ def main():
     # lightning still takes care of proper multiprocessing though
 
     with trainer.init_module():
-        model: Model = instantiate_from_config(config.module)
+        model: DefaultModel = instantiate_from_config(config.module)
 
     # model = torch.compile(model)
 

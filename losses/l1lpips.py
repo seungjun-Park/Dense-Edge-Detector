@@ -34,7 +34,7 @@ class L1LPIPS(Loss):
 
     def l1_edge_weight(self, edge: torch.Tensor) -> torch.Tensor:
         weight = torch.ones_like(edge).to(edge.device)
-        weight[torch.where(edge < 0.8)] += 0.2
+        weight[torch.where(edge < 0.8)] += 0.5
 
         return weight
 
@@ -56,7 +56,7 @@ class L1LPIPS(Loss):
             loss += lpips_loss * self.lpips_weight
 
         if self.granularity_weight > 0.:
-            g_loss = F.mse_loss(self.gnet(imgs, preds), labels).mean()
+            g_loss = F.l1_loss(self.gnet(imgs, preds), labels).mean()
             log_dict.update({f'{split}/g_loss': g_loss.clone().detach().mean()})
             loss += g_loss * self.granularity_weight
 

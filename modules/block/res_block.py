@@ -6,7 +6,6 @@ from timm.layers.grn import GlobalResponseNorm
 from typing import Union, List, Tuple, Type, Dict, Callable
 
 from utils import zero_module
-from utils.load_module import load_module
 from modules.block import Block
 
 
@@ -34,16 +33,15 @@ class ResidualBlock(Block):
 
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
-    def _forward(self, x: torch.Tensor, granularity: torch.Tensor = None) -> torch.Tensor:
+    def _forward(self, x: torch.Tensor, granularity: torch.Tensor) -> torch.Tensor:
         h = self.dwconv(x)
         h = h.permute(0, 2, 3, 1)
         h = self.norm(h)
 
-        if granularity is not None:
-            granularity = self.embed(granularity).type(h.dtype)
-            granularity = granularity[:, None, None, :]
-            scale, shift = granularity.chunk(2, dim=-1)
-            h = h * (1 + scale) + shift
+        granularity = self.embed(granularity).type(h.dtype)
+        granularity = granularity[:, None, None, :]
+        scale, shift = granularity.chunk(2, dim=-1)
+        h = h * (1 + scale) + shift
 
         h = self.pwconv1(h)
         h = self.act(h)

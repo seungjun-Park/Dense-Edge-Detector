@@ -23,8 +23,9 @@ class ConvDownSample(DownSample):
             nn.Conv2d(
                 in_channels,
                 out_channels,
-                kernel_size=2,
+                kernel_size=3,
                 stride=2,
+                padding=1,
                 bias=False
             ),
         )

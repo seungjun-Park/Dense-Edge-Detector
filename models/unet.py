@@ -277,7 +277,7 @@ class UNet(DefaultModel):
                 skip_dims.append(in_ch)
 
             if i != len(self.cfg.channels_mult) - 1:
-                self.encoder_stages.append(
+                self.input_blocks.append(
                     Downsample(
                         in_ch,
                     )
@@ -345,7 +345,8 @@ class UNet(DefaultModel):
                             )
                         )
                     )
-
+                self.output_blocks.append(GranularityEmbedSequential(*layers))
+                
         self.out = nn.Sequential(
             nn.GroupNorm(self.cfg.num_groups, in_ch),
             nn.GELU(approximate='tanh'),

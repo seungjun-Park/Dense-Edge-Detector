@@ -9,21 +9,24 @@ module:
         gnet_ckpt: './checkpoints/gnet/vgg/best.ckpt'
         lpips_weight: 0.0
         l1_weight: 1.0
-        granularity_weight: 1.2
+        granularity_weight: 1.5
 
     in_channels: 3
-    embed_dim: 32
+    model_channels: 64
     out_channels: 1
+    num_res_blocks: 2
     channels_mult: [ 1, 2, 4, 8 ]
-    depths: [2, 2, 2, 2]
-    drop_path: 0.2
+    drop_prob: 0.2
     use_checkpoint: True
+    num_heads: 8,
+    num_head_channels: -1
+    num_groups: 32
 
 data:
   target: datasets.util.DataModuleFromConfig
   params:
     num_workers: 4
-    batch_size: 2
+    batch_size: 1
     wrap: True
     train:
       target: datasets.anime.AnimeDataset

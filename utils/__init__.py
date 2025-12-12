@@ -178,3 +178,30 @@ def adopt_weight(weight, global_step, threshold=0, value=0.):
 def dictionary_filtering(keys: abc.Iterable, dictionary: Dict):
     keys = set(keys)
     return { k: v for k, v in dictionary.items() if k in keys }
+
+
+def granularity_embedding(granularity, dim, max_period=10000):
+    """
+    Create sinusoidal timestep embeddings.
+    :param timesteps: a 1-D Tensor of N indices, one per batch element.
+                      These may be fractional.
+    :param dim: the dimension of the output.
+    :param max_period: controls the minimum frequency of the embeddings.
+    :return: an [N x dim] Tensor of positional embeddings.
+    """
+    if granularity.ndim == 1:
+        granularity = granularity[:, None].float()
+    elif granularity.ndim == 2:
+        granularity = granularity.float()
+    else:
+        raise NotImplementedError(f"granularity ndim should be lower than 3. ndim < 3")
+
+    half = dim // 2
+    freqs = torch.exp(
+        -math.log(max_period) * torch.arange(start=0, end=half, dtype=torch.float32) / half
+    ).to(device=granularity.device)
+    args = granularity * freqs[None]
+    embedding = torch.cat([torch.cos(args), torch.sin(args)], dim=-1)
+    if dim % 2:
+        embedding = torch.cat([embedding, torch.zeros_like(embedding[:, :1])], dim=-1)
+    return embedding

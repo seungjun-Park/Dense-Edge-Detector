@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from omegaconf import DictConfig
 import itertools, random
 
-from models.model import Model
+from models import DefaultModel
 from modules.norm.layer_norm import LayerNorm2d
 
 
@@ -51,9 +51,9 @@ class ConcatBlock(nn.Module):
         return torch.cat([x0, x1], dim=1).mean(dim=[-2, -1])
 
 
-class GranularityNet(Model):
+class GranularityNet(DefaultModel):
     @dataclass
-    class Config(Model.Config):
+    class Config(DefaultModel.Config):
         backbone: str = 'vgg'
         dropout: float = 0.
         use_fusion_block: bool = True,

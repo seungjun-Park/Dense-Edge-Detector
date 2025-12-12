@@ -40,37 +40,37 @@ class ShallowNet(DefaultModel):
 
         out_channels = self.cfg.out_channels if self.cfg.out_channels is not None else self.cfg.in_channels
 
-        granularity_embed_dim = self.cfg.model_channels * 4
+        granularity_embed_dim = self.cfg.embed_dim * 4
         self.granularity_embed = nn.Sequential(
-            nn.Linear(self.cfg.model_channels, granularity_embed_dim),
+            nn.Linear(self.cfg.embed_dim, granularity_embed_dim),
             nn.GELU(),
             nn.Linear(granularity_embed_dim, granularity_embed_dim),
         )
 
         self.embed_block = nn.Sequential(
             nn.Conv2d(self.cfg.in_channels, self.cfg.in_channels, kernel_size=7, padding=3, bias=False),
-            nn.Conv2d(self.cfg.in_channels, self.cfg.model_channels, kernel_size=1, bias=False),
-            LayerNorm2d(self.cfg.model_channels),
+            nn.Conv2d(self.cfg.in_channels, self.cfg.embed_dim, kernel_size=1, bias=False),
+            LayerNorm2d(self.cfg.embed_dim),
         )
 
         self.layers = nn.ModuleList()
         for i in range(self.cfg.num_blocks):
             self.layers.append(
                 CNBlockV2(
-                    self.cfg.model_channels,
+                    self.cfg.embed_dim,
                     granularity_embed_dim,
                     drop_path=self.cfg.drop_prob,
                 )
             )
 
         self.out = nn.Sequential(
-            LayerNorm2d(self.cfg.model_channels),
-            nn.Conv2d(self.cfg.model_channels, out_channels, kernel_size=3, padding=1, bias=False),
+            LayerNorm2d(self.cfg.embed_dim),
+            nn.Conv2d(self.cfg.embed_dim, out_channels, kernel_size=3, padding=1, bias=False),
             nn.Sigmoid()
         )
 
     def forward(self, x: torch.Tensor, granularity: torch.Tensor) -> torch.Tensor:
-        granularity = granularity_embedding(granularity, dim=self.cfg.model_channels)
+        granularity = granularity_embedding(granularity, dim=self.cfg.embed_dim)
         emb = self.granularity_embed(granularity)
         x = self.embed_block(x)
         for layer in self.layers:

@@ -359,7 +359,7 @@ class UNet(DefaultModel):
             x = module(x, emb)
             skips.append(x)
 
-        x = self.middle_blocks(x)
+        x = self.middle_blocks(x, emb)
 
         for module in self.output_blocks:
             x = torch.cat([x, skips.pop()], dim=1)

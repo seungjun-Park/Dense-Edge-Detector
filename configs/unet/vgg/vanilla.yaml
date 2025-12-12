@@ -1,7 +1,7 @@
 module:
   target: models.unet.UNet
   params:
-    lr: 1e-4
+    lr: 2e-5
     log_interval: 50
     loss_config:
       target: losses.l1lpips.L1LPIPS
@@ -9,7 +9,7 @@ module:
         gnet_ckpt: './checkpoints/gnet/vgg/best.ckpt'
         lpips_weight: 1.0
         l1_weight: 1.0
-        granularity_weight: 1.5
+        granularity_weight: 1.0
 
     in_channels: 3
     model_channels: 64

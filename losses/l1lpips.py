@@ -41,8 +41,8 @@ class L1LPIPS(Loss):
     def forward(self, imgs: torch.Tensor, preds: torch.Tensor, edges: torch.Tensor, labels: torch.Tensor, split: str) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         log_dict = {}
 
-        # l1_loss = (F.l1_loss(preds, edges, reduction='none') * self.l1_edge_weight(edges)).mean()
-        l1_loss = F.l1_loss(preds, edges).mean()
+        l1_loss = (F.l1_loss(preds, edges, reduction='none') * self.l1_edge_weight(edges)).mean()
+        # l1_loss = F.l1_loss(preds, edges).mean()
         log_dict.update({f'{split}/l1_loss': l1_loss.clone().detach().mean()})
 
         loss = l1_loss * self.l1_weight

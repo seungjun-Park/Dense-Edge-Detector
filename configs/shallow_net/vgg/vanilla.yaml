@@ -9,7 +9,7 @@ module:
         gnet_ckpt: './checkpoints/gnet/vgg/best.ckpt'
         lpips_weight: 1.0
         l1_weight: 1.0
-        granularity_weight: 1.5
+        granularity_weight: 1.0
 
     in_channels: 3
     embed_dim: 32

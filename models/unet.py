@@ -275,9 +275,7 @@ class UNet(DefaultModel):
 
             if i != len(self.cfg.channels_mult) - 1:
                 self.input_blocks.append(
-                    Downsample(
-                        in_ch,
-                    )
+                    GranularityEmbedSequential(Downsample(in_ch))
                 )
                 skip_dims.append(in_ch)
 

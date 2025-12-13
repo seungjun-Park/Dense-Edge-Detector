@@ -72,19 +72,41 @@ class UNet(DefaultModel):
             self.encoder.append(ConditionalSequential(*blocks))
             skip_dims.append(in_ch)
 
-            if i != len(self.cfg.channels_mult) - 1:
-                self.encoder.append(
-                    DownSample(
-                        in_ch,
-                        self.cfg.model_channels * mult
-                    )
+            self.encoder.append(
+                DownSample(
+                    in_ch,
+                    self.cfg.model_channels * mult
                 )
-                in_ch = self.cfg.model_channels * mult
-                skip_dims.append(in_ch)
+            )
+            in_ch = self.cfg.model_channels * mult
 
+        self.bottle_neck = ConditionalSequential(
+            ResidualBlock(
+                in_channels=in_ch,
+                embed_channels=granularity_embed_dim,
+                drop_prob=self.cfg.drop_prob,
+                use_checkpoint=self.cfg.use_checkpoint
+            ),
+            ResidualBlock(
+                in_channels=in_ch,
+                embed_channels=granularity_embed_dim,
+                drop_prob=self.cfg.drop_prob,
+                use_checkpoint=self.cfg.use_checkpoint
+            )
+        )
 
         for i, mult in list(enumerate(self.cfg.channels_mult))[::-1]:
+            self.decoder.append(
+                Upsample(
+                    in_channels=in_ch,
+                    out_channels=self.cfg.model_channels * mult
+                )
+            )
+
+            in_ch = self.cfg.model_channels * mult
+
             blocks = []
+
             in_ch = in_ch + skip_dims.pop()
             for j in range(self.cfg.num_res_blocks):
                 blocks.append(
@@ -97,16 +119,6 @@ class UNet(DefaultModel):
                 )
 
             self.decoder.append(ConditionalSequential(*blocks))
-
-            if i != 0:
-                self.decoder.append(
-                    Upsample(
-                        in_ch,
-                        self.cfg.model_channels * mult
-                    )
-                )
-
-                in_ch = self.cfg.model_channels * mult
 
         self.out = nn.Sequential(
             LayerNorm2d(in_ch),
@@ -128,6 +140,8 @@ class UNet(DefaultModel):
             x = module(x, emb)
             if not isinstance(module, DownSample):
                 skips.append(x)
+
+        x = self.bottle_neck(x, emb)
 
         for module in self.decoder:
             if not isinstance(module, Upsample):

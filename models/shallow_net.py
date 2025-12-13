@@ -71,8 +71,8 @@ class ShallowNet(DefaultModel):
             x = layer(x, emb)
 
         x = F.sigmoid(x)
-
-        return torch.min(x, dim=1, keepdim=True)
+        x, _ = torch.min(x, dim=1, keepdim=True)
+        return x
 
     def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
         imgs, edges, labels = batch

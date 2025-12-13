@@ -3,23 +3,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Union, List, Tuple, Type
 
-from modules.upsample import UpSample
+from modules.block import Block
+
 from modules.norm.layer_norm import LayerNorm2d
 
 
-class ConvUpSample(UpSample):
+class Upsample(Block):
     def __init__(self,
                  in_channels: int,
                  out_channels: int = None,
-                 mode: str = 'bilinear',
                  *args,
-                 **kwargs
+                 **kwargs,
                  ):
         super().__init__(*args, **kwargs)
-
-        mode = mode.lower()
-        assert mode in ['nearest', 'bilinear', 'bicubic', 'area', 'nearest-eaxct']
-        self.mode = mode
 
         out_channels = out_channels if out_channels else in_channels
 
@@ -30,11 +26,10 @@ class ConvUpSample(UpSample):
             out_channels,
             kernel_size=3,
             padding=1,
-            bias=False
         )
 
-    def _forward(self, x: torch.Tensor, granularity: torch.Tensor = None) -> torch.Tensor:
+    def _forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.norm(x)
-        x = F.interpolate(x, scale_factor=self.scale_factor, mode=self.mode)
+        x = F.interpolate(x, scale_factor=2, mode='nearest')
 
         return self.conv(x)

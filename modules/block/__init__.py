@@ -10,11 +10,11 @@ class Block(nn.Module, ABC):
     def __init__(self,
                  use_checkpoint: bool = False,
                  *args,
-                 **kwargs):
+                 **kwargs,
+                 ):
         super().__init__(*args, **kwargs)
-        self.use_checkpoint = use_checkpoint
 
-        self.apply(self._init_weights)
+        self.use_checkpoint = use_checkpoint
 
     def _init_weights(self, module: nn.Module) -> None:
         if isinstance(module, (nn.Conv2d, nn.Linear)):

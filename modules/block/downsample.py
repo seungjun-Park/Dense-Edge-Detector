@@ -1,13 +1,10 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from typing import Union, Tuple, List, Type, Dict
 
+from modules.block import Block
 from modules.norm.layer_norm import LayerNorm2d
-from modules.downsample import DownSample
 
-
-class ConvDownSample(DownSample):
+class DownSample(Block):
     def __init__(self,
                  in_channels: int,
                  out_channels: int = None,
@@ -26,10 +23,8 @@ class ConvDownSample(DownSample):
                 kernel_size=3,
                 stride=2,
                 padding=1,
-                bias=False
             ),
         )
 
     def _forward(self, x: torch.Tensor, granularity: torch.Tensor = None) -> torch.Tensor:
         return self.down_layer(x)
-

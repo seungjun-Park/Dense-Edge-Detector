@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 
-from utils.init_weight import init_weight
 
 
 class Dist2LogitLayer(nn.Module):

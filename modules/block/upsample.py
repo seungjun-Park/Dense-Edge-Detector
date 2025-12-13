@@ -28,7 +28,7 @@ class Upsample(Block):
             padding=1,
         )
 
-    def _forward(self, x: torch.Tensor) -> torch.Tensor:
+    def _forward(self, x: torch.Tensor, granularity: torch.Tensor = None) -> torch.Tensor:
         x = self.norm(x)
         x = F.interpolate(x, scale_factor=2, mode='nearest')
 

@@ -121,14 +121,17 @@ class UNet(DefaultModel):
         skips = []
         granularity = granularity_embedding(granularity, dim=self.cfg.model_channels)
         emb = self.granularity_embed(granularity)
-        for module in self.input_blocks:
+
+        x = self.embed(x)
+
+        for module in self.encoder:
             x = module(x, emb)
-            skips.append(x)
+            if not isinstance(module, DownSample):
+                skips.append(x)
 
-        x = self.middle_blocks(x, emb)
-
-        for module in self.output_blocks:
-            x = torch.cat([x, skips.pop()], dim=1)
+        for module in self.decoder:
+            if not isinstance(module, Upsample):
+                x = torch.cat([x, skips.pop()], dim=1)
             x = module(x, emb)
 
         return self.out(x)

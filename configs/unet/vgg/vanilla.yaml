@@ -34,6 +34,7 @@ data:
         train: True
         size: [512, 512]
         scale: [ 0.75, 1.0 ]
+        granularity_version: 'vgg'
 
     validation:
       target: datasets.anime.AnimeDataset
@@ -43,6 +44,7 @@ data:
         train: False
         size: [512, 512]
         scale: [ 0.75, 1.0 ]
+        granularity_version: 'vgg'
 
 logger:
   target: pytorch_lightning.loggers.tensorboard.TensorBoardLogger

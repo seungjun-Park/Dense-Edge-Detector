@@ -44,7 +44,9 @@ class AnimeDataset(Dataset):
 
         self.img_names = glob.glob(f'{root}/*/images/*.*')
         self.granularity_version = granularity_version
-        assert self.granularity_version in ['vgg', 'vgg_no_fusion', 'convnext', 'convnext_no_fusion', 'convnext_v2', 'convnext_v2_no_fusion']
+        if self.granularity_version is not None:
+            assert self.granularity_version in ['vgg', 'vgg_no_fusion', 'convnext', 'convnext_no_fusion', 'convnext_v2',
+                                                'convnext_v2_no_fusion']
 
         self.color_jitter = transforms.ColorJitter(brightness=0, contrast=0.5, saturation=0.5, hue=0.5)
         self.invert = transforms.RandomInvert(p=1.0)

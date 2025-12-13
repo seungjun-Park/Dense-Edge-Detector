@@ -90,7 +90,7 @@ class AnimeDataset(Dataset):
                 label = torch.tensor([0.0])
         else:
             name = name.rsplit('.', 1)[0]
-            label = torch.from_numpy(np.load(f'{path}/granularity/edges_{level}/{self.granularity_version}/{name}.npy'))
+            label = torch.from_numpy([np.load(f'{path}/granularity/edges_{level}/{self.granularity_version}/{name}.npy')])
 
         return img, edge, label
 

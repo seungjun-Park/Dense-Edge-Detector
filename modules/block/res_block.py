@@ -68,25 +68,24 @@ class CNBlockV2(Block):
             nn.Linear(embed_channels, in_channels * 2)
         )
 
-        self.dwconv = nn.Conv2d(in_channels, in_channels, kernel_size=7, padding=3, groups=in_channels, bias=False)
+        self.dwconv = nn.Conv2d(in_channels, in_channels, kernel_size=7, padding=3, groups=in_channels)
         self.norm = nn.LayerNorm(in_channels, eps=1e-6)
-        self.pwconv1 = nn.Linear(in_channels , in_channels * 4, bias=False)
+        self.pwconv1 = nn.Linear(in_channels , in_channels * 4)
         self.act = nn.GELU()
         self.grn = GlobalResponseNorm(4 * in_channels, channels_last=True)
-        self.pwconv2 = nn.Linear(in_channels * 4, in_channels, bias=False)
+        self.pwconv2 = nn.Linear(in_channels * 4, in_channels)
 
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
-    def _forward(self, x: torch.Tensor, granularity: torch.Tensor = None) -> torch.Tensor:
+    def _forward(self, x: torch.Tensor, granularity: torch.Tensor) -> torch.Tensor:
+        granularity = self.embed(granularity)
+        granularity = granularity[:, None, None, :]
+
         h = self.dwconv(x)
         h = h.permute(0, 2, 3, 1)
         h = self.norm(h)
-
-        if granularity is not None:
-            granularity = self.embed(granularity).type(h.dtype)
-            granularity = granularity[:, None, None, :]
-            scale, shift = granularity.chunk(2, dim=-1)
-            h = h * (1 + scale) + shift
+        scale, shift = granularity.chunk(2, dim=-1)
+        h = h * (1 + scale) + shift
 
         h = self.pwconv1(h)
         h = self.act(h)

@@ -27,6 +27,7 @@ class AnimeDataset(Dataset):
                  size: int | List[int] | Tuple[int] = 224,
                  scale: List[float] | Tuple[float] = (0.08, 1.0),
                  ratio: List[float] | Tuple[float] = (1.0, 1.0),
+                 granularity_version: str = None
                  ):
         super().__init__()
 
@@ -42,6 +43,8 @@ class AnimeDataset(Dataset):
             root = os.path.join(root, 'val')
 
         self.img_names = glob.glob(f'{root}/*/images/*.*')
+        self.granularity_version = granularity_version
+        assert self.granularity_version in ['vgg', 'vgg_no_fusion', 'convnext', 'convnext_no_fusion', 'convnext_v2', 'convnext_v2_no_fusion']
 
         self.color_jitter = transforms.ColorJitter(brightness=0, contrast=0.5, saturation=0.5, hue=0.5)
         self.invert = transforms.RandomInvert(p=1.0)
@@ -57,13 +60,6 @@ class AnimeDataset(Dataset):
 
         img = cv2.imread(f'{img_name}', cv2.IMREAD_COLOR)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-        if level == 0:
-            label = torch.tensor([1.0])
-        elif level == 1:
-            label = torch.tensor([0.5])
-        else:
-            label = torch.tensor([0.0])
 
         edge = cv2.imread(f'{path}/edges_{level}/{name}', cv2.IMREAD_GRAYSCALE)
 
@@ -84,6 +80,17 @@ class AnimeDataset(Dataset):
         if random.random() < 0.5:
             img = self.horizontal_flip(img)
             edge = self.horizontal_flip(edge)
+
+        if self.granularity_version is None:
+            if level == 0:
+                label = torch.tensor([1.0])
+            elif level == 1:
+                label = torch.tensor([0.5])
+            else:
+                label = torch.tensor([0.0])
+        else:
+            name = name.rsplit('.', 1)[0]
+            label = torch.from_numpy(np.load(f'{path}/granularity/edges_{level}/{self.granularity_version}/{name}.npy'))
 
         return img, edge, label
 

@@ -14,7 +14,7 @@ module:
     in_channels: 3
     embed_dim: 32
     out_channels: 1
-    num_blocks: 2
+    num_blocks: 3
 
 data:
   target: datasets.util.DataModuleFromConfig
@@ -30,6 +30,7 @@ data:
         train: True
         size: [512, 512]
         scale: [ 0.75, 1.0 ]
+        granularity_version: 'vgg'
 
     validation:
       target: datasets.anime.AnimeDataset
@@ -39,6 +40,7 @@ data:
         train: False
         size: [512, 512]
         scale: [ 0.75, 1.0 ]
+        granularity_version: 'vgg'
 
 logger:
   target: pytorch_lightning.loggers.tensorboard.TensorBoardLogger

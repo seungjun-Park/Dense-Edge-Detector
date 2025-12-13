@@ -10,7 +10,6 @@ from dataclasses import dataclass, field
 from omegaconf import DictConfig
 
 from models import DefaultModel
-from losses.l1lpips import L1LPIPS
 from modules.norm.layer_norm import LayerNorm2d
 from utils import granularity_embedding
 from modules.block.res_block import CNBlockV2
@@ -60,14 +59,9 @@ class ShallowNet(DefaultModel):
                     self.cfg.embed_dim,
                     granularity_embed_dim,
                     drop_path=self.cfg.drop_prob,
+                    use_checkpoint=self.cfg.use_checkpoint
                 )
             )
-
-        self.out = nn.Sequential(
-            LayerNorm2d(self.cfg.embed_dim),
-            nn.Conv2d(self.cfg.embed_dim, out_channels, kernel_size=3, padding=1, bias=False),
-            nn.Sigmoid()
-        )
 
     def forward(self, x: torch.Tensor, granularity: torch.Tensor) -> torch.Tensor:
         granularity = granularity_embedding(granularity, dim=self.cfg.embed_dim)
@@ -76,13 +70,12 @@ class ShallowNet(DefaultModel):
         for layer in self.layers:
             x = layer(x, emb)
 
-        return self.out(x)
+        x = F.sigmoid(x)
+
+        return torch.min(x, dim=1, keepdim=True)
 
     def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
         imgs, edges, labels = batch
-        with torch.no_grad():
-            if isinstance(self.loss_fn, L1LPIPS) and edges is not None:
-                labels = self.loss_fn.gnet(imgs, edges)
 
         preds = self(imgs, labels)
 

@@ -15,6 +15,7 @@ class L1LPIPS(Loss):
                  gnet_ckpt: str,
                  lpips_weight: float = 1.0,
                  l1_weight: float = 1.0,
+                 l1_balance_weight: float = 10.,
                  granularity_weight: float = 1.0,
                  *args,
                  **kwargs
@@ -24,6 +25,7 @@ class L1LPIPS(Loss):
         self.perceptual_loss = LPIPS().eval()
         self.lpips_weight = lpips_weight
         self.l1_weight = l1_weight
+        self.l1_balance_weight = l1_balance_weight
         self.granularity_weight = granularity_weight
 
         if granularity_weight > 0:
@@ -34,7 +36,7 @@ class L1LPIPS(Loss):
 
     def l1_edge_weight(self, edge: torch.Tensor) -> torch.Tensor:
         weight = torch.ones_like(edge).to(edge.device)
-        weight[torch.where(edge < 0.8)] += 0.5
+        weight[torch.where(edge < 0.6)] = self.l1_balance_weight
 
         return weight
 

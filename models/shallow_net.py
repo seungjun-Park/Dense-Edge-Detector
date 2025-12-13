@@ -12,7 +12,7 @@ from omegaconf import DictConfig
 from models import DefaultModel
 from modules.norm.layer_norm import LayerNorm2d
 from utils import granularity_embedding
-from modules.block.res_block import CNBlockV2
+from modules.block.res_block import ResidualBlock
 
 
 class ShallowNet(DefaultModel):
@@ -55,7 +55,7 @@ class ShallowNet(DefaultModel):
         self.layers = nn.ModuleList()
         for i in range(self.cfg.num_blocks):
             self.layers.append(
-                CNBlockV2(
+                ResidualBlock(
                     self.cfg.embed_dim,
                     granularity_embed_dim,
                     drop_path=self.cfg.drop_prob,

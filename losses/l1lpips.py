@@ -36,7 +36,7 @@ class L1LPIPS(Loss):
 
     def l1_edge_weight(self, edge: torch.Tensor) -> torch.Tensor:
         weight = torch.ones_like(edge).to(edge.device)
-        weight[torch.where(edge < 0.6)] = self.l1_balance_weight
+        weight[torch.where(edge < 0.4)] = self.l1_balance_weight
 
         return weight
 

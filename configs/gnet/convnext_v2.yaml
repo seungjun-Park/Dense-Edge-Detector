@@ -3,12 +3,10 @@ module:
   params:
     backbone: 'convnextv2'
     dropout: 0.3
-    lr: 1e-4
+    lr: 2e-5
     weight_decay: 0.0
     log_interval: 50
     use_fusion_block: True
-    loss_config:
-      target: losses.triplet.TripletMarginLoss
 
 
 data:

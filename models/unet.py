@@ -50,7 +50,7 @@ class UNet(DefaultModel):
             nn.Linear(granularity_embed_dim, granularity_embed_dim),
         )
 
-        self.embed = nn.Conv2d(self.cfg.in_channels, self.cfg.model_channels, kernel_size=7, padding=3)
+        self.embed = nn.Conv2d(self.cfg.in_channels, self.cfg.model_channels, kernel_size=3, padding=1)
 
         self.encoder = nn.ModuleList()
         self.decoder = nn.ModuleList()

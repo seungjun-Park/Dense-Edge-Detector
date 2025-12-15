@@ -2,7 +2,7 @@ module:
   target: models.unet.UNet
   params:
     lr: 2e-5
-    log_interval: 50
+    log_interval: 100
     loss_config:
       target: losses.l1lpips.L1LPIPS
       params:
@@ -13,10 +13,10 @@ module:
         granularity_weight: 1.0
 
     in_channels: 3
-    model_channels: 32
+    model_channels: 64
     out_channels: 1
     num_res_blocks: 2
-    channels_mult: [1, 2, 4, 8]
+    channels_mult: [1, 2, 4]
     drop_prob: 0.2
     use_checkpoint: True
 

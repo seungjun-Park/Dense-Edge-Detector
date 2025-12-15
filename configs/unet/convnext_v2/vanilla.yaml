@@ -2,21 +2,22 @@ module:
   target: models.unet.UNet
   params:
     lr: 1e-4
-    log_interval: 50
+    log_interval: 100
     loss_config:
       target: losses.l1lpips.L1LPIPS
       params:
         gnet_ckpt: './checkpoints/gnet/convnext_v2/best.ckpt'
         lpips_weight: 1.0
         l1_weight: 1.0
-        granularity_weight: 1.2
+        l1_balance_weight: 1.5
+        granularity_weight: 1.0
 
     in_channels: 3
-    embed_dim: 32
+    model_channels: 64
     out_channels: 1
-    channels_mult: [ 1, 2, 4, 8 ]
-    depths: [2, 2, 2, 2]
-    drop_path: 0.2
+    num_res_blocks: 2
+    channels_mult: [ 1, 2, 4 ]
+    drop_prob: 0.2
     use_checkpoint: True
 
 data:
@@ -32,7 +33,8 @@ data:
         # root: 'D:/datasets/anime'
         train: True
         size: [512, 512]
-        scale: [ 0.5, 1.0 ]
+        scale: [ 0.75, 1.0 ]
+        granularity_version: 'convnext_v2'
 
     validation:
       target: datasets.anime.AnimeDataset
@@ -41,7 +43,8 @@ data:
         # root: 'D:/datasets/anime'
         train: False
         size: [512, 512]
-        scale: [ 0.5, 1.0 ]
+        scale: [ 0.75, 1.0 ]
+        granularity_version: 'convnext_v2'
 
 logger:
   target: pytorch_lightning.loggers.tensorboard.TensorBoardLogger

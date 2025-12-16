@@ -21,16 +21,14 @@ import time
 from torchvision.transforms import InterpolationMode
 
 from utils import instantiate_from_config
-from models.model import Model
 from models.unet import UNet
-from models.discriminator import Discriminator
 
 
 
 def test():
-    versions = ['vgg', 'convnext', 'convnext_v2']
+    versions = ['vgg']
 
-    data_path = f'D:/datasets/anime/*/*/images'
+    data_path = f'local_datasets/anime/*/*/images'
     # data_path = 'D:/datasets/BIPED/val/images'
     # data_path = '../BSDS500/images/test'
     # data_path = 'D:/datasets/div2k/test/x2'
@@ -45,7 +43,7 @@ def test():
                 img = cv2.imread(f'{name}', cv2.IMREAD_COLOR)
                 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                 img = torchvision.transforms.ToTensor()(img).cuda()
-                img = torchvision.transforms.Resize(520, interpolation=InterpolationMode.BICUBIC, antialias=True, max_size=528)(img)
+                img = torchvision.transforms.Resize(520, interpolation=InterpolationMode.BICUBIC, antialias=True, max_size=1024)(img)
                 c, h, w = img.shape
                 img = img.unsqueeze(0)
                 if w % 8 != 0:

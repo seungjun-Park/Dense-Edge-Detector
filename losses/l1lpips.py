@@ -17,6 +17,7 @@ class L1LPIPS(Loss):
                  l1_weight: float = 1.0,
                  l1_balance_weight: float = 10.,
                  granularity_weight: float = 1.0,
+                 threshold: float = 0.4,
                  *args,
                  **kwargs
                  ):
@@ -27,6 +28,7 @@ class L1LPIPS(Loss):
         self.l1_weight = l1_weight
         self.l1_balance_weight = l1_balance_weight
         self.granularity_weight = granularity_weight
+        self.threshold = threshold
 
         if granularity_weight > 0:
             self.gnet = GranularityNet.load_from_checkpoint(gnet_ckpt, strict=False).eval()
@@ -36,7 +38,7 @@ class L1LPIPS(Loss):
 
     def l1_edge_weight(self, edge: torch.Tensor) -> torch.Tensor:
         weight = torch.ones_like(edge).to(edge.device)
-        weight[torch.where(edge < 0.4)] = self.l1_balance_weight
+        weight[torch.where(edge < self.threshold)] = self.l1_balance_weight
 
         return weight
 

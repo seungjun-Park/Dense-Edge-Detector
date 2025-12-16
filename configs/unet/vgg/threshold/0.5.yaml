@@ -1,22 +1,24 @@
 module:
   target: models.unet.UNet
   params:
-    lr: 1e-4
-    log_interval: 50
+    lr: 2e-5
+    log_interval: 100
     loss_config:
       target: losses.l1lpips.L1LPIPS
       params:
-        gnet_ckpt: './checkpoints/gnet/convnext_v2/best.ckpt'
+        gnet_ckpt: './checkpoints/gnet/vgg/best.ckpt'
         lpips_weight: 1.0
         l1_weight: 1.0
-        granularity_weight: 0.0
+        l1_balance_weight: 1.5
+        granularity_weight: 1.0
+        threshold: 0.5
 
     in_channels: 3
-    embed_dim: 32
+    model_channels: 64
     out_channels: 1
-    channels_mult: [ 1, 2, 4, 8 ]
-    depths: [2, 2, 2, 2]
-    drop_path: 0.2
+    num_res_blocks: 2
+    channels_mult: [1, 2, 4]
+    drop_prob: 0.2
     use_checkpoint: True
 
 data:
@@ -32,7 +34,8 @@ data:
         # root: 'D:/datasets/anime'
         train: True
         size: [512, 512]
-        scale: [ 0.5, 1.0 ]
+        scale: [ 0.75, 1.0 ]
+        granularity_version: 'vgg'
 
     validation:
       target: datasets.anime.AnimeDataset
@@ -41,21 +44,22 @@ data:
         # root: 'D:/datasets/anime'
         train: False
         size: [512, 512]
-        scale: [ 0.5, 1.0 ]
+        scale: [ 0.75, 1.0 ]
+        granularity_version: 'vgg'
 
 logger:
   target: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
   params:
     save_dir: './logs'
-    name: 'unet/convnext_v2'
-    version: 'no_gnet'
+    name: 'unet/vgg'
+    version: 'threshold/0_5'
 
 
 checkpoints:
   latest_checkpoints:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/convnext_v2/no_gnet'
+      dirpath: './checkpoints/unet/vgg/threshold/0_5'
       filename: 'last'
       monitor: 'step'
       mode: 'max'
@@ -64,7 +68,7 @@ checkpoints:
   best_checkpoint:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/convnext_v2/no_gnet'
+      dirpath: './checkpoints/unet/vgg/threshold/0_5'
       filename: 'best'
       monitor: 'valid/total_loss'
       mode: 'min'
@@ -74,3 +78,4 @@ trainer:
   accelerator: 'gpu'
   max_epochs: 100
   accumulate_grad_batches: 2
+  # precision: 'bf16'

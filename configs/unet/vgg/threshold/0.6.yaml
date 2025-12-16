@@ -1,20 +1,25 @@
 module:
-  target: models.shallow_net.ShallowNet
+  target: models.unet.UNet
   params:
-    lr: 1e-4
-    log_interval: 50
+    lr: 2e-5
+    log_interval: 100
     loss_config:
       target: losses.l1lpips.L1LPIPS
       params:
         gnet_ckpt: './checkpoints/gnet/vgg/best.ckpt'
         lpips_weight: 1.0
         l1_weight: 1.0
+        l1_balance_weight: 1.5
         granularity_weight: 1.0
+        threshold: 0.6
 
     in_channels: 3
-    embed_dim: 32
+    model_channels: 64
     out_channels: 1
-    num_blocks: 3
+    num_res_blocks: 2
+    channels_mult: [1, 2, 4]
+    drop_prob: 0.2
+    use_checkpoint: True
 
 data:
   target: datasets.util.DataModuleFromConfig
@@ -46,15 +51,15 @@ logger:
   target: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
   params:
     save_dir: './logs'
-    name: 'shallow_net/vgg'
-    version: 'vanilla'
+    name: 'unet/vgg'
+    version: 'threshold/0_6'
 
 
 checkpoints:
   latest_checkpoints:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/shallow_net/vgg/vanilla'
+      dirpath: './checkpoints/unet/vgg/threshold/0_6'
       filename: 'last'
       monitor: 'step'
       mode: 'max'
@@ -63,7 +68,7 @@ checkpoints:
   best_checkpoint:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/shallow_net/vgg/vanilla'
+      dirpath: './checkpoints/unet/vgg/threshold/0_6'
       filename: 'best'
       monitor: 'valid/total_loss'
       mode: 'min'

@@ -30,7 +30,7 @@ from models.unet import UNet
 def test():
     versions = ['vgg']
     sep = '\\' if platform.system() == 'Windows' else '/'
-    data_path = f'local_datasets/anime/*/*/images'
+    data_path = f'/local_datasets/anime/*/*/images'
     # data_path = 'D:/datasets/BIPED/val/images'
     # data_path = '../BSDS500/images/test'
     # data_path = 'D:/datasets/div2k/test/x2'

@@ -64,8 +64,8 @@ def test():
                     edge = edge.float().detach().cpu()[0]
                     edge = torchvision.transforms.ToPILImage()(edge)
 
-                    os.makedirs(f'./test/{v}/{n}/{i}', exist_ok=True)
-                    edge.save(f'./test/{v}/{n}/{i}/{f}', 'png')
+                    os.makedirs(f'./edge_test/{v}/{n}/{i}', exist_ok=True)
+                    edge.save(f'./edge_test/{v}/{n}/{i}/{f}', 'png')
 
 if __name__ == '__main__':
     test()

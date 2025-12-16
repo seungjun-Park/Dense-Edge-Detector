@@ -45,7 +45,7 @@ def test():
                 img = cv2.imread(f'{name}', cv2.IMREAD_COLOR)
                 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                 img = torchvision.transforms.ToTensor()(img).cuda()
-                img = torchvision.transforms.Resize(520, interpolation=InterpolationMode.BICUBIC, antialias=True, max_size=1024)(img)
+                # img = torchvision.transforms.Resize(520, interpolation=InterpolationMode.BICUBIC, antialias=True, max_size=1024)(img)
                 c, h, w = img.shape
                 img = img.unsqueeze(0)
                 if w % 8 != 0:

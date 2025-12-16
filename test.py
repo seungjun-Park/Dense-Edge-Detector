@@ -3,6 +3,8 @@ import argparse
 import glob
 import math
 import os.path
+import platform
+
 from PIL import Image
 
 import numpy as np
@@ -27,14 +29,14 @@ from models.unet import UNet
 
 def test():
     versions = ['vgg']
-
+    sep = '\\' if platform.system() == 'Windows' else '/'
     data_path = f'local_datasets/anime/*/*/images'
     # data_path = 'D:/datasets/BIPED/val/images'
     # data_path = '../BSDS500/images/test'
     # data_path = 'D:/datasets/div2k/test/x2'
     file_names = glob.glob(f'{data_path}/*.*')
     gs = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-
+    print(len(file_names))
     for v in versions:
         model = UNet.load_from_checkpoint(f'./checkpoints/unet/{v}/vanilla/best.ckpt', strict=False).eval().cuda()
         model.loss_fn = None
@@ -56,7 +58,7 @@ def test():
                 # edges = model(img, torch.tensor([0.0]).cuda())
                 # edges = edges.float().detach().cpu()[0]
                 # edges = torchvision.transforms.ToPILImage()(edges)
-                n = name.rsplit('\\', 4)
+                n = name.rsplit(f'{sep}', 4)
                 f = n[-1]
                 n = "/".join([n[1], n[2]])
                 for i, g in enumerate(gs):

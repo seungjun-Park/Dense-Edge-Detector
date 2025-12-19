@@ -18,6 +18,7 @@ class L1LPIPS(Loss):
                  l1_balance_weight: float = 10.,
                  granularity_weight: float = 1.0,
                  threshold: float = 0.4,
+                 use_best_quality: bool = False,
                  *args,
                  **kwargs
                  ):
@@ -29,6 +30,7 @@ class L1LPIPS(Loss):
         self.l1_balance_weight = l1_balance_weight
         self.granularity_weight = granularity_weight
         self.threshold = threshold
+        self.use_best_quality = use_best_quality
 
         if granularity_weight > 0:
             self.gnet = GranularityNet.load_from_checkpoint(gnet_ckpt, strict=False).eval()
@@ -60,7 +62,11 @@ class L1LPIPS(Loss):
             loss += lpips_loss * self.lpips_weight
 
         if self.granularity_weight > 0.:
-            g_loss = F.l1_loss(self.gnet(imgs, preds), labels).mean()
+            if self.use_best_quality:
+                g_loss = -self.gnet(imgs, preds).mean()
+            else:
+                g_loss = F.l1_loss(self.gnet(imgs, preds), labels).mean()
+
             log_dict.update({f'{split}/g_loss': g_loss.clone().detach().mean()})
             loss += g_loss * self.granularity_weight
 

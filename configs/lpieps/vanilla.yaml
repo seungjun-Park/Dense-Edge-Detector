@@ -19,8 +19,8 @@ data:
     train:
       target: datasets.anime_triplet.AnimeTripletDataset
       params:
-        # root: '/local_datasets/anime'
-        root: 'D:/datasets/anime'
+        root: '/local_datasets/anime'
+        # root: 'D:/datasets/anime'
         train: True
         size: [224, 224]
         scale: [ 0.75, 1.0 ]
@@ -28,8 +28,8 @@ data:
     validation:
       target: datasets.anime_triplet.AnimeTripletDataset
       params:
-        # root: '/local_datasets/anime'
-        root: 'D:/datasets/anime'
+        root: '/local_datasets/anime'
+        # root: 'D:/datasets/anime'
         train: False
         size: [224, 224]
         scale: [ 0.75, 1.0 ]

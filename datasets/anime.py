@@ -75,9 +75,9 @@ class AnimeDataset(Dataset):
                 else:
                     label = torch.tensor([0.0])
             else:
-                name = name.rsplit('.', 1)[0]
+                label_name = name.rsplit('.', 1)[0]
                 label = torch.from_numpy(
-                    np.load(f'{path}/granularity/edges_{level}/{self.granularity_version}/{name}.npy')).unsqueeze(0)
+                    np.load(f'{path}/granularity/edges_{level}/{self.granularity_version}/{label_name}.npy')).unsqueeze(0)
 
         img = cv2.imread(f'{img_name}', cv2.IMREAD_COLOR)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)

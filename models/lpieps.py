@@ -147,3 +147,9 @@ class LPIEPS(DefaultModel):
         self.log_dict(loss_log)
 
         return loss
+
+    def on_train_batch_end(self, outputs, batch, batch_idx):
+        with torch.no_grad():
+            for name, param in self.named_parameters():
+                if 'lins' in name:
+                    param.clamp_(min=1e-6)

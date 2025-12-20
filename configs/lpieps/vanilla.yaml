@@ -1,14 +1,14 @@
 module:
   target: models.lpieps.LPIEPS
   params:
-    lr: 2e-5
+    lr: 1e-4
     log_interval: 100
     loss_config:
       target: losses.multi_level_triplet.MultiLevelTripletLoss
       params:
-        margin_fine: 0.05
-        margin_coarse: 0.15
-        lambda_identity: 0.1
+        margin_fine: 0.5
+        margin_coarse: 0.5
+        lambda_identity: 1.0
 
 data:
   target: datasets.util.DataModuleFromConfig

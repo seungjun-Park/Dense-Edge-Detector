@@ -10,6 +10,10 @@ from losses.loss import Loss
 from models.gnet import GranularityNet
 
 
+def rescale(x: torch.Tensor) -> torch.Tensor:
+    return (x * 2.) - 1.
+
+
 class L1LPIPS(Loss):
     def __init__(self,
                  gnet_ckpt: str,
@@ -57,7 +61,7 @@ class L1LPIPS(Loss):
         edges = edges.repeat(1, 3, 1, 1).contiguous()
 
         if self.lpips_weight > 0.:
-            lpips_loss = self.perceptual_loss(edges, preds).mean()
+            lpips_loss = self.perceptual_loss(rescale(edges), rescale(preds)).mean()
             log_dict.update({f'{split}/lpips_loss': lpips_loss.clone().detach().mean()})
             loss += lpips_loss * self.lpips_weight
 

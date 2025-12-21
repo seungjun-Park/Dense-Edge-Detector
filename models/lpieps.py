@@ -141,7 +141,7 @@ class LPIEPS(pl.LightningModule):
         for adaptor, lin, feat_imgs, feat_edges in zip(self.adaptors, self.lins, feats_imgs, feats_edges):
             feat_imgs = adaptor(feat_imgs)
             adaptors_feats.append(feat_imgs)
-            feat_imgs = feats_imgs.detech()
+            feat_imgs = feat_imgs.detech()
             diff = (normalize_tensor(feat_imgs) - normalize_tensor(feat_edges)) ** 2
             res = spatial_average(lin(diff))
             val += res

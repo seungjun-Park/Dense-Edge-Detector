@@ -84,7 +84,7 @@ class LPIEPS(pl.LightningModule):
         self.log_interval = log_interval
         self.weight_decay = weight_decay
 
-        self.backbone = timm.create_model('vgg16_bn', pretrained=True, features_only=True)
+        self.backbone = timm.create_model('vgg16_bn', pretrained=True, features_only=True).eval()
 
         for param in self.backbone.parameters():
             param.requires_grad = False

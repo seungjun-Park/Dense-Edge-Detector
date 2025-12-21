@@ -8,6 +8,7 @@ from taming.modules.losses import LPIPS
 from losses.loss import Loss
 
 from models.gnet import GranularityNet
+from models.lpieps import LPIEPS
 
 
 def rescale(x: torch.Tensor) -> torch.Tensor:
@@ -36,10 +37,15 @@ class L1LPIPS(Loss):
         self.threshold = threshold
         self.use_best_quality = use_best_quality
 
-        if granularity_weight > 0:
-            self.gnet = GranularityNet.load_from_checkpoint(gnet_ckpt, strict=False).eval()
-            for param in self.gnet.parameters():
-                param.requires_grad = False
+        # if granularity_weight > 0:
+        #     self.gnet = GranularityNet.load_from_checkpoint(gnet_ckpt, strict=False).eval()
+        #     for param in self.gnet.parameters():
+        #         param.requires_grad = False
+
+
+        self.lpieps = LPIEPS.load_from_checkpoint('./checkpoints/lpieps/best.ckpt', strict=False).eval()
+        for param in self.lpieps.parameters():
+            param.requires_grad = False
 
 
     def l1_edge_weight(self, edge: torch.Tensor) -> torch.Tensor:
@@ -65,15 +71,19 @@ class L1LPIPS(Loss):
             log_dict.update({f'{split}/lpips_loss': lpips_loss.clone().detach().mean()})
             loss += lpips_loss * self.lpips_weight
 
-        if self.granularity_weight > 0.:
-            if self.use_best_quality:
-                g_loss = -self.gnet(imgs, preds).mean()
-            else:
-                g_loss = F.l1_loss(self.gnet(imgs, preds), labels).mean()
+        # if self.granularity_weight > 0.:
+        #     if self.use_best_quality:
+        #         g_loss = -self.gnet(imgs, preds).mean()
+        #     else:
+        #         g_loss = F.l1_loss(self.gnet(imgs, preds), labels).mean()
+        #
+        #     log_dict.update({f'{split}/g_loss': g_loss.clone().detach().mean()})
+        #     loss += g_loss * self.granularity_weight
 
-            log_dict.update({f'{split}/g_loss': g_loss.clone().detach().mean()})
-            loss += g_loss * self.granularity_weight
+        lpieps_loss = (self.lpieps(imgs, preds) * 10).mean()
+        log_dict.update({f'{split}/lpieps_loss': lpieps_loss.clone().detach().mean()})
 
+        loss += lpieps_loss
         log_dict.update({f'{split}/total_loss': loss.clone().detach().mean()})
 
         return loss, log_dict

@@ -28,7 +28,7 @@ def upsample(in_tens: torch.Tensor, out_HW: Tuple[int] = (64, 64)) -> torch.Tens
 class Adaptor(nn.Module):
     def __init__(self,
                  in_channels: int,
-                 reduction_ratio: float = 4.0
+                 reduction_ratio: float = 2
                  ):
         super().__init__()
 
@@ -41,14 +41,6 @@ class Adaptor(nn.Module):
             nn.Conv2d(hidden_dim, in_channels, kernel_size=1, bias=True),
             nn.ReLU(inplace=True),
         )
-
-        self.apply(self._init_weights)
-
-    def _init_weights(self, module: nn.Module) -> None:
-        if isinstance(module, (nn.Conv2d, nn.Linear)):
-            nn.init.trunc_normal_(module.weight, std=0.02)
-            if module.bias is not None:
-                nn.init.constant_(module.bias, 0)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.layer(x)
@@ -74,14 +66,6 @@ class NetLinLayer(nn.Module):
             nn.Dropout(),
             nn.Conv2d(in_channels, 1, kernel_size=1, bias=False)
         )
-
-        self.apply(self._init_weights)
-
-    def _init_weights(self, module: nn.Module) -> None:
-        if isinstance(module, (nn.Conv2d, nn.Linear)):
-            nn.init.trunc_normal_(module.weight, std=0.02)
-            if module.bias is not None:
-                nn.init.constant_(module.bias, 0)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.layers(x)
@@ -117,7 +101,7 @@ class LPIEPS(DefaultModel):
                 Adaptor(c)
             )
 
-    def forward(self, imgs: torch.Tensor, edges: torch.Tensor) -> torch.Tensor:
+    def forward(self, imgs: torch.Tensor, edges: torch.Tensor, return_feats: bool = False) -> torch.Tensor:
         b = imgs.shape[0]
         if edges.shape[1] == 1:
             edges = edges.repeat(1, 3, 1, 1)
@@ -129,21 +113,27 @@ class LPIEPS(DefaultModel):
         feats_edges = self.backbone(edges)
 
         val = 0
+        adaptors_feats = []
         for adaptor, lin, feat_imgs, feat_edges in zip(self.adaptors, self.lins, feats_imgs, feats_edges):
-            diff = (normalize_tensor(adaptor(feat_imgs)) - normalize_tensor(feat_edges)) ** 2
+            feat_imgs = adaptor(feat_imgs)
+            adaptors_feats.append(feat_imgs)
+            diff = (normalize_tensor(feat_imgs) - normalize_tensor(feat_edges)) ** 2
             res = spatial_average(lin(diff))
             val += res
+
+        if return_feats:
+            return  val.reshape(b), adaptors_feats, feats_edges
 
         return val.reshape(b)
 
     def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
         imgs, edges_0, edges_1, edges_2 = batch
 
-        d_high = self(imgs, edges_0)
+        d_high, adaptors_feats, feats_edges = self(imgs, edges_0, True)
         d_mid = self(imgs, edges_1)
         d_poor = self(imgs, edges_2)
 
-        loss, loss_log = self.loss_fn(d_high, d_mid, d_poor, split='train' if self.training else 'valid')
+        loss, loss_log = self.loss_fn(d_high, d_mid, d_poor, adaptors_feats, feats_edges, split='train' if self.training else 'valid')
         self.log_dict(loss_log)
 
         return loss

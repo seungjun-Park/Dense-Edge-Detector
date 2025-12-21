@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from typing import Tuple, Dict
 
 class MultiLevelTripletLoss(nn.Module):
@@ -13,7 +14,8 @@ class MultiLevelTripletLoss(nn.Module):
         self.margin_coarse = margin_coarse
         self.lambda_identity = lambda_identity
 
-    def forward(self, d_high, d_mid, d_poor, split: str) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    def forward(self, d_high: torch.Tensor, d_mid: torch.Tensor, d_poor: torch.Tensor,
+                adaptors_feats: Tuple[torch.Tensor], feats_edges: Tuple[torch.Tensor], split: str) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """
         Args:
             d_high, d_mid, d_poor: [B] 형태의 텐서 (Weighted L2 Distance 결과)
@@ -36,7 +38,10 @@ class MultiLevelTripletLoss(nn.Module):
         # 4. Identity Loss
         # High 엣지는 원본과 거리가 0에 가까워야 함 (L2 Distance이므로 제곱 불필요, 그 자체로 최소화)
         # Weighted L2는 이미 제곱합의 성격이 있으므로 d_high 자체를 줄이거나 d_high^2를 줄임
-        loss_identity = torch.mean(d_high)
+        loss_identity = 0
+        for adaptor_feats, feat_edges in zip(adaptors_feats, feats_edges):
+            loss_identity += F.mse_loss(adaptor_feats, feat_edges)
+
         log_dict.update({f'{split}/loss_identity': loss_identity.clone().detach().mean()})
 
         # 최종 합산

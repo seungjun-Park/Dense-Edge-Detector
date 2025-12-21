@@ -133,7 +133,7 @@ class LPIEPS(DefaultModel):
         d_mid = self(imgs, edges_1)
         d_poor = self(imgs, edges_2)
 
-        loss, loss_log = self.loss_fn(d_high, d_mid, d_poor, adaptors_feats, feats_edges, split='train' if self.training else 'valid')
+        loss, loss_log = self.loss_fn(d_high, d_mid, d_poor, adaptors_feats, feats_edges, self.global_step, split='train' if self.training else 'valid')
         self.log_dict(loss_log)
 
         return loss

@@ -35,10 +35,10 @@ class Adaptor(nn.Module):
         hidden_dim = int(in_channels // reduction_ratio)
 
         self.layer = nn.Sequential(
-            nn.Conv2d(in_channels, hidden_dim, kernel_size=1, bias=False),
+            nn.Conv2d(in_channels, hidden_dim, kernel_size=3, padding=1, bias=False),
             nn.InstanceNorm2d(hidden_dim, affine=True),
             nn.ReLU(inplace=True),
-            nn.Conv2d(hidden_dim, in_channels, kernel_size=1, bias=True),
+            nn.Conv2d(hidden_dim, in_channels, kernel_size=3, padding=1, bias=False),
             nn.ReLU(inplace=True),
         )
 

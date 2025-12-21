@@ -43,7 +43,7 @@ class L1LPIPS(Loss):
         #         param.requires_grad = False
 
 
-        self.lpieps = LPIEPS.load_from_checkpoint('./checkpoints/lpieps/best.ckpt', strict=False).eval()
+        self.lpieps = LPIEPS.load_from_checkpoint('./checkpoints/lpieps/vanilla/best.ckpt', strict=False).eval()
         for param in self.lpieps.parameters():
             param.requires_grad = False
 

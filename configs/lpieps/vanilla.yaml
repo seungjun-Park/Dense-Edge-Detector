@@ -6,9 +6,9 @@ module:
     loss_config:
       target: losses.multi_level_triplet.MultiLevelTripletLoss
       params:
-        margin_fine: 0.5
-        margin_coarse: 0.5
-        lambda_identity: 1.0
+        margin_fine: 0.2
+        margin_coarse: 0.2
+        lambda_identity: 2.0
 
 data:
   target: datasets.util.DataModuleFromConfig
@@ -63,6 +63,6 @@ checkpoints:
 
 trainer:
   accelerator: 'gpu'
-  max_epochs: 400
+  max_epochs: 1400
   accumulate_grad_batches: 1
   # precision: 'bf16'

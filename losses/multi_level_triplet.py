@@ -8,13 +8,11 @@ class MultiLevelTripletLoss(nn.Module):
                  margin_fine=0.05,
                  margin_coarse=0.15,
                  lambda_identity=0.1,
-                 start_step: int = 1e3,
                  ):
         super().__init__()
         self.margin_fine = margin_fine
         self.margin_coarse = margin_coarse
         self.lambda_identity = lambda_identity
-        self.start_step = start_step
 
     def forward(self, d_high: torch.Tensor, d_mid: torch.Tensor, d_poor: torch.Tensor, split: str) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """

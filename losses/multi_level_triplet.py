@@ -16,8 +16,7 @@ class MultiLevelTripletLoss(nn.Module):
         self.lambda_identity = lambda_identity
         self.start_step = start_step
 
-    def forward(self, d_high: torch.Tensor, d_mid: torch.Tensor, d_poor: torch.Tensor,
-                adaptors_feats: Tuple[torch.Tensor], feats_edges: Tuple[torch.Tensor], global_step: int, split: str) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    def forward(self, d_high: torch.Tensor, d_mid: torch.Tensor, d_poor: torch.Tensor, split: str) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """
         Args:
             d_high, d_mid, d_poor: [B] 형태의 텐서 (Weighted L2 Distance 결과)

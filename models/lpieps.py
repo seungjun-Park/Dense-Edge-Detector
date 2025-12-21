@@ -22,7 +22,8 @@ def spatial_average(in_tens: torch.Tensor, keepdim: bool = True) -> torch.Tensor
 class Adaptor(nn.Module):
     def __init__(self,
                  in_channels: int,
-                 reduction_ratio: float = 2
+                 reduction_ratio: float = 2,
+                 drop_prob: float = 0.1,
                  ):
         super().__init__()
 
@@ -32,7 +33,8 @@ class Adaptor(nn.Module):
             nn.Conv2d(in_channels, hidden_dim, kernel_size=3, padding=1, bias=False),
             nn.InstanceNorm2d(hidden_dim, affine=True),
             nn.ReLU(inplace=True),
-            nn.Conv2d(hidden_dim, in_channels, kernel_size=3, padding=1, bias=False),
+            nn.Dropout(drop_prob),
+            nn.Conv2d(hidden_dim, in_channels, kernel_size=3, padding=1, bias=True),
             nn.ReLU(inplace=True),
         )
 

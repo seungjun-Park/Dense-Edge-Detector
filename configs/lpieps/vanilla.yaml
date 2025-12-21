@@ -6,8 +6,8 @@ module:
     loss_config:
       target: losses.multi_level_triplet.MultiLevelTripletLoss
       params:
-        margin_fine: 0.2
-        margin_coarse: 0.2
+        margin_fine: 0.05
+        margin_coarse: 0.05
         lambda_identity: 2.0
 
 data:

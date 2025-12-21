@@ -151,7 +151,7 @@ class LPIEPS(pl.LightningModule):
 
         return val.reshape(b)
 
-    def step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
+    def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
         opt_adaptors, opt_lins = self.optimizers()
 
         imgs, edges_0, edges_1, edges_2 = batch
@@ -179,6 +179,25 @@ class LPIEPS(pl.LightningModule):
         self.log_dict(loss_log)
         self.log(f'{split}/loss_adaptor', loss_adaptor.clone().detach())
 
+    def validation_step(self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], batch_idx) -> Optional[torch.Tensor]:
+        opt_adaptors, opt_lins = self.optimizers()
+
+        imgs, edges_0, edges_1, edges_2 = batch
+
+        d_high, adaptors_feats, feats_edges = self(imgs, edges_0, True)
+        d_mid = self(imgs, edges_1)
+        d_poor = self(imgs, edges_2)
+
+        loss_adaptor = 0
+        for adaptor_feats, feat_edges in zip(adaptors_feats, feats_edges):
+            loss_adaptor += F.mse_loss(adaptor_feats, feat_edges)
+
+        split = 'train' if self.training else 'valid'
+
+        loss, loss_log = self.loss_fn(d_high, d_mid, d_poor, split=split)
+
+        self.log_dict(loss_log)
+        self.log(f'{split}/loss_adaptor', loss_adaptor.clone().detach())
 
     def on_train_batch_end(self, outputs, batch, batch_idx):
         with torch.no_grad():

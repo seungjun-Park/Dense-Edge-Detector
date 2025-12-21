@@ -38,10 +38,7 @@ class MultiLevelTripletLoss(nn.Module):
         log_dict.update({f'{split}/loss_coarse': loss_coarse.clone().detach().mean()})
 
         # 4. Identity Loss
-        loss_identity = 0
-        for adaptor_feats, feat_edges in zip(adaptors_feats, feats_edges):
-            loss_identity += F.mse_loss(adaptor_feats, feat_edges)
-
+        loss_identity = d_high.mean()
         log_dict.update({f'{split}/loss_identity': loss_identity.clone().detach().mean()})
 
         # 최종 합산

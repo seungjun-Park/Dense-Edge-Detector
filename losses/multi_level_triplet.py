@@ -41,9 +41,7 @@ class MultiLevelTripletLoss(nn.Module):
         log_dict.update({f'{split}/loss_identity': loss_identity.clone().detach().mean()})
 
         # 최종 합산
-        total_loss = (self.lambda_identity * loss_identity)
-        if global_step > self.start_step:
-            total_loss += loss_coarse + loss_fine
+        total_loss = loss_coarse + loss_fine + (self.lambda_identity * loss_identity)
         log_dict.update({f'{split}/total_loss': total_loss.clone().detach().mean()})
 
         return total_loss, log_dict

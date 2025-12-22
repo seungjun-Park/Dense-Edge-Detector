@@ -11,6 +11,9 @@ from utils import instantiate_from_config
 from losses.loss import Loss
 
 
+def rescale(x: torch.Tensor) -> torch.Tensor:
+    return (x * 2.) - 1.
+
 def normalize_tensor(in_feat,eps=1e-10):
     norm_factor = torch.sqrt(torch.sum(in_feat**2,dim=1,keepdim=True))
     return in_feat/(norm_factor+eps)
@@ -24,17 +27,21 @@ class Adaptor(nn.Module):
                  in_channels: int,
                  reduction_ratio: float = 2,
                  drop_prob: float = 0.1,
+                 use_mlp: bool = True,
                  ):
         super().__init__()
 
         hidden_dim = int(in_channels // reduction_ratio)
 
+        ks = 1 if use_mlp else 3
+        pad = 0 if use_mlp else 1
+
         self.layer = nn.Sequential(
-            nn.Conv2d(in_channels, hidden_dim, kernel_size=3, padding=1, bias=False),
+            nn.Conv2d(in_channels, hidden_dim, kernel_size=ks, padding=pad, bias=False),
             nn.InstanceNorm2d(hidden_dim, affine=True),
             nn.ReLU(inplace=True),
             nn.Dropout(drop_prob),
-            nn.Conv2d(hidden_dim, in_channels, kernel_size=3, padding=1, bias=True),
+            nn.Conv2d(hidden_dim, in_channels, kernel_size=ks, padding=pad, bias=False),
             nn.ReLU(inplace=True),
         )
 
@@ -76,6 +83,7 @@ class LPIEPS(pl.LightningModule):
                  loss_config: DictConfig = None,
                  ckpt_path: str = None,
                  ignore_keys: Tuple[str] = (),
+                 use_mlp: bool = True,
                  ):
 
         super().__init__()
@@ -101,7 +109,7 @@ class LPIEPS(pl.LightningModule):
             )
 
             self.adaptors.append(
-                Adaptor(c)
+                Adaptor(c, use_mlp=use_mlp)
             )
 
         if ckpt_path is not None:
@@ -132,8 +140,8 @@ class LPIEPS(pl.LightningModule):
         if edges.shape[1] == 1:
             edges = edges.repeat(1, 3, 1, 1)
 
-        imgs = self.scaling_layer(imgs)
-        edges = self.scaling_layer(edges)
+        imgs = self.scaling_layer(rescale(imgs))
+        edges = self.scaling_layer(rescale(edges))
 
         feats_imgs = self.backbone(imgs)
         feats_edges = self.backbone(edges)

@@ -80,7 +80,7 @@ class L1LPIPS(Loss):
         #     log_dict.update({f'{split}/g_loss': g_loss.clone().detach().mean()})
         #     loss += g_loss * self.granularity_weight
 
-        lpieps_loss = (self.lpieps(imgs, preds) * 10).mean()
+        lpieps_loss = (self.lpieps(imgs, preds) * 100).mean()
         log_dict.update({f'{split}/lpieps_loss': lpieps_loss.clone().detach().mean()})
 
         loss += lpieps_loss

@@ -65,5 +65,5 @@ checkpoints:
 trainer:
   accelerator: 'gpu'
   max_epochs: 600
-  accumulate_grad_batches: 2
+  # accumulate_grad_batches: 2
   # precision: 'bf16'

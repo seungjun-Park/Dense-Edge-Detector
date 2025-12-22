@@ -23,12 +23,12 @@ class ResidualBlock(Block):
             nn.Linear(embed_channels, in_channels * 2)
         )
 
-        self.dwconv = nn.Conv2d(in_channels, in_channels, kernel_size=7, padding=3, groups=in_channels)
+        self.dwconv = nn.Conv2d(in_channels, in_channels, kernel_size=7, padding=3, groups=in_channels, bias=False)
         self.norm = nn.LayerNorm(in_channels, eps=1e-6)
-        self.pwconv1 = nn.Linear(in_channels, in_channels * 4)
+        self.pwconv1 = nn.Linear(in_channels, in_channels * 4, bias=False)
         self.act = nn.GELU(approximate='tanh')
         self.grn = GlobalResponseNorm(4 * in_channels, channels_last=True)
-        self.pwconv2 = nn.Linear(in_channels * 4, in_channels)
+        self.pwconv2 = nn.Linear(in_channels * 4, in_channels, bias=False)
 
         self.drop_path = DropPath(drop_prob) if drop_prob > 0. else nn.Identity()
 

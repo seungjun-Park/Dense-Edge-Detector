@@ -7,6 +7,8 @@ module:
       target: losses.l1lpips.L1LPIPS
       params:
         gnet_ckpt: './checkpoints/gnet/vgg/best.ckpt'
+        lpieps_ckpt: './checkpoints/lpieps/conv/best.ckpt'
+        lpieps_weight: 100
         lpips_weight: 1.0
         l1_weight: 1.0
         l1_balance_weight: 1.5
@@ -53,15 +55,15 @@ logger:
   target: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
   params:
     save_dir: './logs'
-    name: 'unet/vgg'
-    version: 'lpieps'
+    name: 'unet/lpieps'
+    version: 'conv'
 
 
 checkpoints:
   latest_checkpoints:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/vgg/lpieps'
+      dirpath: './checkpoints/unet/lpieps/conv'
       filename: 'last'
       monitor: 'step'
       mode: 'max'
@@ -70,7 +72,7 @@ checkpoints:
   best_checkpoint:
     target: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      dirpath: './checkpoints/unet/vgg/lpieps'
+      dirpath: './checkpoints/unet/lpieps/conv'
       filename: 'best'
       monitor: 'valid/total_loss'
       mode: 'min'

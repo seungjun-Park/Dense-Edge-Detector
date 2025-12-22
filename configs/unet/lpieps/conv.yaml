@@ -8,7 +8,7 @@ module:
       params:
         gnet_ckpt: './checkpoints/gnet/vgg/best.ckpt'
         lpieps_ckpt: './checkpoints/lpieps/conv/best.ckpt'
-        lpieps_weight: 100
+        lpieps_weight: 10
         lpips_weight: 1.0
         l1_weight: 1.0
         l1_balance_weight: 1.5

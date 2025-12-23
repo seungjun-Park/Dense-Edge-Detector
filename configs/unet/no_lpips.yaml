@@ -10,7 +10,7 @@ module:
         l1_weight: 1.0
         l1_balance_weight: 1.5
         granularity_weight: 0.0
-        lpieps_eight: 0.0
+        lpieps_weight: 0.0
         threshold: 0.3
 
     in_channels: 3

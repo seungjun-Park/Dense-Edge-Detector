@@ -17,13 +17,13 @@ def rescale(x: torch.Tensor) -> torch.Tensor:
 
 class L1LPIPS(Loss):
     def __init__(self,
-                 gnet_ckpt: str,
-                 lpieps_ckpt: str,
                  lpips_weight: float = 1.0,
                  l1_weight: float = 1.0,
                  l1_balance_weight: float = 10.,
                  granularity_weight: float = 1.0,
+                 gnet_ckpt: str = None,
                  lpieps_weight: float = 10.,
+                 lpieps_ckpt: str = None,
                  threshold: float = 0.4,
                  use_best_quality: bool = False,
                  *args,
@@ -40,15 +40,18 @@ class L1LPIPS(Loss):
         self.use_best_quality = use_best_quality
         self.lpieps_weight = lpieps_weight
 
-        # if granularity_weight > 0:
-        #     self.gnet = GranularityNet.load_from_checkpoint(gnet_ckpt, strict=False).eval()
-        #     for param in self.gnet.parameters():
-        #         param.requires_grad = False
+        if granularity_weight > 0:
+            assert gnet_ckpt is not None
+            self.gnet = GranularityNet.load_from_checkpoint(gnet_ckpt, strict=False).eval()
+            for param in self.gnet.parameters():
+                param.requires_grad = False
 
 
-        self.lpieps = LPIEPS.load_from_checkpoint(f'{lpieps_ckpt}', strict=False).eval()
-        for param in self.lpieps.parameters():
-            param.requires_grad = False
+        if lpieps_weight > 0:
+            assert lpieps_ckpt is not None
+            self.lpieps = LPIEPS.load_from_checkpoint(f'{lpieps_ckpt}', strict=False).eval()
+            for param in self.lpieps.parameters():
+                param.requires_grad = False
 
 
     def l1_edge_weight(self, edge: torch.Tensor) -> torch.Tensor:
@@ -74,19 +77,21 @@ class L1LPIPS(Loss):
             log_dict.update({f'{split}/lpips_loss': lpips_loss.clone().detach().mean()})
             loss += lpips_loss * self.lpips_weight
 
-        # if self.granularity_weight > 0.:
-        #     if self.use_best_quality:
-        #         g_loss = -self.gnet(imgs, preds).mean()
-        #     else:
-        #         g_loss = F.l1_loss(self.gnet(imgs, preds), labels).mean()
-        #
-        #     log_dict.update({f'{split}/g_loss': g_loss.clone().detach().mean()})
-        #     loss += g_loss * self.granularity_weight
+        if self.granularity_weight > 0.:
+            if self.use_best_quality:
+                g_loss = -self.gnet(imgs, preds).mean()
+            else:
+                g_loss = F.l1_loss(self.gnet(imgs, preds), labels).mean()
 
-        lpieps_loss = (self.lpieps(imgs, preds) * self.lpieps_weight).mean()
-        log_dict.update({f'{split}/lpieps_loss': lpieps_loss.clone().detach().mean()})
+            log_dict.update({f'{split}/g_loss': g_loss.clone().detach().mean()})
+            loss += g_loss * self.granularity_weight
 
-        loss += lpieps_loss
+        if self.lpieps_weight > 0.:
+            lpieps_loss = (self.lpieps(imgs, preds) * self.lpieps_weight).mean()
+            log_dict.update({f'{split}/lpieps_loss': lpieps_loss.clone().detach().mean()})
+
+            loss += lpieps_loss
+
         log_dict.update({f'{split}/total_loss': loss.clone().detach().mean()})
 
         return loss, log_dict
